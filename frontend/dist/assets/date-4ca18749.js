@@ -1,0 +1,1 @@
+const e=r=>{if(!r)return"";const t=new Date(r);return`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")} ${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`};export{e as f};
