@@ -5,10 +5,13 @@ import com.campusmarket.dto.GoodsFilterRequest;
 import com.campusmarket.dto.GoodsResponse;
 import com.campusmarket.dto.GoodsReviewRequest;
 import com.campusmarket.dto.GoodsUpdateRequest;
+import com.campusmarket.dto.HotGoodsItemResponse;
 import com.campusmarket.entity.Goods;
-import com.campusmarket.entity.User;
 import com.campusmarket.entity.GoodsStatus;
+import com.campusmarket.entity.User;
+import com.campusmarket.service.GoodsMetricsService;
 import com.campusmarket.service.GoodsService;
+import com.campusmarket.service.HotGoodsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,9 +35,15 @@ import java.util.List;
 public class GoodsController {
 
     private final GoodsService goodsService;
+    private final HotGoodsService hotGoodsService;
+    private final GoodsMetricsService goodsMetricsService;
 
-    public GoodsController(GoodsService goodsService) {
+    public GoodsController(GoodsService goodsService,
+                           HotGoodsService hotGoodsService,
+                           GoodsMetricsService goodsMetricsService) {
         this.goodsService = goodsService;
+        this.hotGoodsService = hotGoodsService;
+        this.goodsMetricsService = goodsMetricsService;
     }
 
     @GetMapping
@@ -74,6 +83,7 @@ public class GoodsController {
         goods.setCategory(request.getCategory());
         goods.setPrice(request.getPrice());
         goods.setCoverImageUrl(request.getCoverImageUrl());
+        goods.setQuantity(request.getQuantity());
         goods.setSellerId(user.getId());
         Goods saved = goodsService.createGoods(goods);
         boolean adminView = "ADMIN".equalsIgnoreCase(user.getRole());
@@ -107,5 +117,28 @@ public class GoodsController {
     public GoodsResponse reviewGoods(@PathVariable Long id,
                                      @RequestBody @Validated GoodsReviewRequest request) {
         return goodsService.reviewGoods(id, request.getStatus());
+    }
+
+    @GetMapping("/hot")
+    public List<HotGoodsItemResponse> listHotGoods(@RequestParam(defaultValue = "6") int limit) {
+        return hotGoodsService.getTopHotGoods(limit);
+    }
+
+    @GetMapping("/ranking")
+    public List<HotGoodsItemResponse> listRanking(@RequestParam(defaultValue = "orders") String metric,
+                                                  @RequestParam(defaultValue = "10") int limit) {
+        return hotGoodsService.getRanking(metric, limit);
+    }
+
+    @PostMapping("/{id}/view")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void recordView(@PathVariable Long id) {
+        try {
+            Goods goods = goodsService.getGoodsEntity(id);
+            if (GoodsStatus.APPROVED.name().equals(goods.getStatus())) {
+                goodsMetricsService.recordView(id);
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
     }
 }

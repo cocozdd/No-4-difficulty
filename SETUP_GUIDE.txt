@@ -169,3 +169,25 @@ CREATE TABLE IF NOT EXISTS chat_message (
 
 
 F:\minio>.\minio.exe server F:\minio\data --console-address ":9090"
+(base) PS F:\NO.4_Difficulty\frontend> npm run dev
+8. Kafka (Apache Kafka 3.x / Spring Kafka)
+   - 默认连接 `localhost:9092`；可在 `backend/src/main/resources/application.yml` 的 `spring.kafka.bootstrap-servers` 中调整。
+   - **Docker 快速启动示例**
+     ```powershell
+     docker pull bitnami/kafka:3.7
+     docker run -d --name campus-kafka `
+       -p 9092:9092 -p 9093:9093 `
+       -e KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 `
+       -e KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 `
+       -e KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT `
+       -e KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@localhost:9093 `
+       -e KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER `
+       bitnami/kafka:3.7
+     ```
+   - 常用排查命令：
+     ```powershell
+     docker exec -it campus-kafka kafka-topics.sh --bootstrap-server localhost:9092 --list
+     docker exec -it campus-kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-events --from-beginning
+     ```
+   - Spring Boot 已通过 `spring-kafka` 集成，订单事件会发布到 `${app.kafka.order-topic}`（默认 `order-events`）。
+   - 生产环境请配置多节点、副本、ACL，并配合 Prometheus/Grafana 或 Kafka Manager 进行监控。

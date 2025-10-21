@@ -32,31 +32,46 @@
       <template #template>
         <el-skeleton-item variant="rect" style="width: 100%; height: 148px; margin-bottom: 16px" />
       </template>
-      <el-row :gutter="16" class="goods-grid">
-        <el-col v-for="item in goodsStore.goods" :key="item.id" :xs="24" :sm="12" :md="8">
-          <el-card class="goods-card" shadow="hover">
-            <img
-              :src="item.coverImageUrl || getFallbackImageByCategory(item.category)"
-              alt=""
-              class="goods-cover"
+      <div class="goods-content">
+        <el-empty v-if="!totalGoods" description="No goods found" />
+        <template v-else>
+          <el-row :gutter="16" class="goods-grid">
+            <el-col v-for="item in paginatedGoods" :key="item.id" :xs="24" :sm="12" :md="8">
+              <el-card class="goods-card" shadow="hover">
+                <img
+                  :src="item.coverImageUrl || getFallbackImageByCategory(item.category)"
+                  alt=""
+                  class="goods-cover"
+                />
+                <div class="goods-body">
+                  <h3>{{ item.title }}</h3>
+                  <p class="description">{{ item.description }}</p>
+                  <div class="meta">
+                    <span class="price">CNY {{ item.price }}</span>
+                    <span class="stock">Left: {{ item.quantity }}</span>
+                    <el-button size="small" type="primary" @click="goDetail(item.id)">View detail</el-button>
+                  </div>
+                </div>
+              </el-card>
+            </el-col>
+          </el-row>
+          <div v-if="totalGoods > pageSize" class="pagination">
+            <el-pagination
+              layout="prev, pager, next"
+              :current-page="currentPage"
+              :page-size="pageSize"
+              :total="totalGoods"
+              @current-change="handlePageChange"
             />
-            <div class="goods-body">
-              <h3>{{ item.title }}</h3>
-              <p class="description">{{ item.description }}</p>
-              <div class="meta">
-                <span class="price">CNY {{ item.price }}</span>
-                <el-button size="small" type="primary" @click="goDetail(item.id)">View detail</el-button>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
+          </div>
+        </template>
+      </div>
     </el-skeleton>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useGoodsStore } from '../stores/goodsStore';
 import { useUserStore } from '../stores/userStore';
@@ -74,8 +89,16 @@ const filters = reactive({
 });
 
 const isAuthenticated = computed(() => userStore.isAuthenticated);
+const pageSize = 2;
+const currentPage = ref(1);
+const totalGoods = computed(() => goodsStore.goods.length);
+const paginatedGoods = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  return goodsStore.goods.slice(start, start + pageSize);
+});
 
 const applyFilters = () => {
+  currentPage.value = 1;
   goodsStore.loadGoods({
     category: filters.category,
     minPrice: filters.minPrice,
@@ -89,11 +112,26 @@ const resetFilters = () => {
   filters.minPrice = undefined;
   filters.maxPrice = undefined;
   filters.keyword = '';
+  currentPage.value = 1;
   goodsStore.loadGoods();
 };
 
 const goDetail = (id: number) => router.push(`/goods/${id}`);
 const goMyGoods = () => router.push('/goods/mine');
+
+const handlePageChange = (page: number) => {
+  currentPage.value = page;
+};
+
+watch(
+  () => goodsStore.goods.length,
+  (length) => {
+    const maxPage = Math.max(1, Math.ceil(length / pageSize));
+    if (currentPage.value > maxPage) {
+      currentPage.value = maxPage;
+    }
+  }
+);
 
 if (!goodsStore.goods.length) {
   goodsStore.loadGoods();
@@ -118,6 +156,12 @@ if (!goodsStore.goods.length) {
 
 .goods-grid {
   margin-top: 8px;
+}
+
+.goods-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .goods-card {
@@ -145,10 +189,22 @@ if (!goodsStore.goods.length) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .price {
   color: #1e90ff;
   font-weight: 600;
+}
+
+.stock {
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
 }
 </style>

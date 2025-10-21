@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="my-goods-view">
     <el-row :gutter="24">
       <el-col :xs="24" :md="10">
@@ -28,6 +28,9 @@
             <el-form-item label="Price (CNY)" prop="price">
               <el-input-number v-model="form.price" :min="0.01" :step="1" />
             </el-form-item>
+            <el-form-item label="Quantity" prop="quantity">
+              <el-input-number v-model="form.quantity" :min="1" :step="1" />
+            </el-form-item>
             <el-form-item label="Description" prop="description">
               <el-input
                 v-model="form.description"
@@ -36,11 +39,34 @@
                 placeholder="Add detail such as condition, included accessories, etc."
               />
             </el-form-item>
-            <el-form-item label="Cover Image URL (optional)" prop="coverImageUrl">
-              <el-input
-                v-model="form.coverImageUrl"
-                placeholder="Leave empty to auto-generate a placeholder"
-              />
+            <el-form-item label="Cover Image">
+              <div class="upload-row">
+                <el-upload
+                  class="cover-upload"
+                  :show-file-list="false"
+                  :auto-upload="false"
+                  accept="image/*"
+                  :before-upload="beforeGoodsImageUpload"
+                  :on-change="handleGoodsImageChange"
+                  :disabled="goodsImageUploading"
+                >
+                  <el-button type="primary" :loading="goodsImageUploading">
+                    <template #icon>
+                      <el-icon><PictureFilled /></el-icon>
+                    </template>
+                    Upload Image
+                  </el-button>
+                </el-upload>
+                <el-image
+                  v-if="form.coverImageUrl"
+                  :src="form.coverImageUrl"
+                  fit="cover"
+                  class="cover-preview"
+                />
+                <el-button v-if="form.coverImageUrl" text type="danger" @click="removeGoodsImage">
+                  Remove
+                </el-button>
+              </div>
             </el-form-item>
             <el-form-item>
               <el-button type="primary" :loading="submitting" @click="submitForm">Submit</el-button>
@@ -75,6 +101,7 @@
                   </div>
                 </div>
                 <p class="price">CNY {{ item.price }}</p>
+                <p class="stock">Available: {{ item.quantity }}</p>
                 <p class="description">{{ item.description }}</p>
                 <p
                   v-if="item.status !== 'APPROVED'"
@@ -100,21 +127,26 @@
 import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { FormInstance, FormRules } from 'element-plus';
-import { ElMessage } from 'element-plus';
+import { ElMessage, type UploadFile, type UploadProps } from 'element-plus';
+import { PictureFilled } from '@element-plus/icons-vue';
 import { useGoodsStore } from '../stores/goodsStore';
 import { getFallbackImageByCategory } from '../utils/image';
 import type { GoodsStatus } from '../apis/goods';
+import { uploadGoodsImage } from '../apis/upload';
 
 const goodsStore = useGoodsStore();
 const router = useRouter();
 
 const formRef = ref<FormInstance>();
 const submitting = ref(false);
+const goodsImageUploading = ref(false);
+const GOODS_MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const form = reactive({
   title: '',
   description: '',
   category: '',
   price: 1,
+  quantity: 1,
   coverImageUrl: ''
 });
 
@@ -122,6 +154,7 @@ const rules: FormRules = {
   title: [{ required: true, message: 'Title is required', trigger: 'blur' }],
   category: [{ required: true, message: 'Select a category', trigger: 'change' }],
   price: [{ required: true, message: 'Price is required', trigger: 'change' }],
+  quantity: [{ required: true, message: 'Quantity is required', trigger: 'change' }],
   description: [{ required: true, message: 'Description is required', trigger: 'blur' }]
 };
 
@@ -131,6 +164,38 @@ onMounted(() => {
 
 const refreshList = () => {
   goodsStore.loadMyGoods();
+};
+
+const beforeGoodsImageUpload: UploadProps['beforeUpload'] = () => false;
+
+const handleGoodsImageChange: UploadProps['onChange'] = async (uploadFile) => {
+  const raw = uploadFile.raw;
+  if (!raw) {
+    return;
+  }
+  if (!raw.type.startsWith('image/')) {
+    ElMessage.error('Only image files are allowed');
+    return;
+  }
+  if (raw.size > GOODS_MAX_IMAGE_SIZE) {
+    ElMessage.error('Image size cannot exceed 5MB');
+    return;
+  }
+  goodsImageUploading.value = true;
+  try {
+    const { data } = await uploadGoodsImage(raw);
+    form.coverImageUrl = data.url;
+    ElMessage.success('Image uploaded');
+  } catch (error: any) {
+    const message = error?.response?.data?.message || 'Failed to upload image';
+    ElMessage.error(message);
+  } finally {
+    goodsImageUploading.value = false;
+  }
+};
+
+const removeGoodsImage = () => {
+  form.coverImageUrl = '';
 };
 
 const submitForm = () => {
@@ -160,6 +225,7 @@ const resetForm = () => {
   form.description = '';
   form.category = '';
   form.price = 1;
+  form.quantity = 1;
   form.coverImageUrl = '';
 };
 
@@ -200,6 +266,20 @@ const statusTagType: Record<GoodsStatus, 'info' | 'success' | 'danger' | 'warnin
   margin-bottom: 16px;
 }
 
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cover-preview {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
 .goods-card {
   border-radius: 16px;
   overflow: hidden;
@@ -235,6 +315,11 @@ const statusTagType: Record<GoodsStatus, 'info' | 'success' | 'danger' | 'warnin
   margin-bottom: 8px;
 }
 
+.stock {
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
 .description {
   min-height: 40px;
   color: #6b7280;
@@ -253,3 +338,6 @@ const statusTagType: Record<GoodsStatus, 'info' | 'success' | 'danger' | 'warnin
   color: #ef4444;
 }
 </style>
+
+
+

@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@stomp/stompjs": "^6.1.2",
     "axios": "1.5.1",
     "element-plus": "2.4.3",
     "pinia": "2.1.7",

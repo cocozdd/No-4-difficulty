@@ -1,0 +1,46 @@
+Redis Integration – Completed Work
+==================================
+
+1. Runtime Environment  
+   - Added `spring-boot-starter-data-redis` and centralised `RedisTemplate/StringRedisTemplate` configuration.  
+   - Expanded `application.yml` with `spring.redis.*`; documented Docker 6.2.14 and WSL installation flows in `SETUP_GUIDE.txt`.  
+   - Wrapped Redis operations with graceful fallbacks so that metrics / hot-goods services degrade safely if Redis is unreachable.
+
+2. Hot Goods & Metrics  
+   - `GoodsMetricsService` tracks views, cart additions, and orders (`goods:metrics:*` hashes).  
+   - `HotGoodsService` calculates a composite score (orders + carts + views + time decay), caches the payload in `goods:hot:cache`, and exposes `/api/goods/hot`.  
+   - `/goods/{id}/view` endpoint + front-end integration ensure behaviour data feeds Redis in real time.
+
+3. Shopping Cart & Order Hooks  
+   - Cart additions update Redis counters; order creation increments purchase metrics and clears buyer cart entries.  
+   - Goods lifecycle operations trigger hot-cache eviction to keep rankings consistent.
+
+4. Documentation & Tooling  
+   - `SETUP_GUIDE.txt` now covers MinIO, Redis (Docker/WSL),维护命令以及常见问题排查。  
+   - Verified Redis 容器 (`campus-redis`) 正常运行 (`redis-cli ping`) 并可持久化数据。
+
+5. Goods Detail & List Caching (NEW)  
+   - Implemented cache-aside strategy for `/api/goods` and `/api/goods/{id}`：命中 Redis 即返回，未命中落库后写回缓存。  
+   - Key 设计：`goods:detail:{id}`、`goods:list:{queryHash}`，TTL 加随机抖动；空值缓存避免穿透。  
+   - 商品创建/更新/审核/库存变化时自动失效相关缓存并刷新热门榜单；frontend 透明受益，DB 压力下降。
+
+6. Order Rate Limiting (NEW)  
+   - 在 `OrderServiceImpl` 中使用 Redis `INCR` + `EXPIRE` 为用户级下单频率设限（默认 60 秒内最多 5 次）。  
+   - 限流逻辑失败时自动降级，确保主流程可用，同时避免突发刷单对数据库造成压力。
+
+7. Chat Unread Counters (NEW)  
+   - `ChatMessageServiceImpl` 将未读消息数放入 Redis Hash（`chat:unread:{receiver}`），发送消息即自增，阅读时删除。  
+   - `listConversations` 会优先读取缓存中的未读数，实现实时化的未读提醒，同时减少数据库统计压力。
+
+8. Goods Ranking via Sorted Sets (NEW)  
+   - `GoodsMetricsServiceImpl` 将浏览/加购/下单计数同步到 Redis Sorted Set (`goods:ranking:*`)。  
+   - `HotGoodsServiceImpl#getRanking` 暴露排行榜查询能力，`GET /api/goods/ranking` 可按订单/加购/浏览维度获取实时榜单。
+
+
+Next Ideas (Optional Enhancements)
+==================================
+
+- 在线用户 / 未读消息：在 Redis 维护 `user:online:{id}` 和 `chat:unread:{receiver}:{sender}`，优化聊天状态。  
+- 限流 & 防刷：使用 `INCR`+`EXPIRE` 或 Lua 实现下单/加购频率控制。  
+- 排行榜/运营报表：利用 Sorted Set 维护销量榜、活跃卖家榜，实时提供运营数据。  
+- 分布式锁 & 消息队列：进一步保障库存一致性、异步通知，支撑更大规模扩展。*** End Patch

@@ -8,12 +8,29 @@
           <router-link to="/goods">Goods</router-link>
           <router-link to="/orders" v-if="userStore.isAuthenticated">Orders</router-link>
           <router-link to="/goods/mine" v-if="userStore.isAuthenticated">My Goods</router-link>
+          <el-badge
+            v-if="userStore.isAuthenticated"
+            :value="cartCount"
+            :hidden="cartCount === 0"
+          >
+            <router-link to="/cart">Cart</router-link>
+          </el-badge>
           <router-link
             to="/admin/review"
             v-if="userStore.isAuthenticated && isAdmin"
           >
             Review Queue
           </router-link>
+          <el-badge
+            v-if="userStore.isAuthenticated"
+            :value="totalUnread"
+            :hidden="totalUnread === 0"
+            class="message-entry"
+          >
+            <el-button text type="primary" @click="openChat">
+              <el-icon><chat-dot-round /></el-icon>
+            </el-button>
+          </el-badge>
           <router-link to="/login" v-if="!userStore.isAuthenticated">Login</router-link>
           <el-dropdown v-else>
             <span class="el-dropdown-link">
@@ -34,18 +51,35 @@
         <router-view />
       </el-main>
     </el-container>
+    <chat-center v-model="chatVisible" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { ArrowDown } from '@element-plus/icons-vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { ArrowDown, ChatDotRound } from '@element-plus/icons-vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from './stores/userStore';
+import { useChatStore } from './stores/chatStore';
+import { useCartStore } from './stores/cartStore';
+import ChatCenter from './components/ChatCenter.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
+const chatStore = useChatStore();
+const cartStore = useCartStore();
 const isAdmin = computed(() => userStore.role === 'ADMIN');
+const chatVisible = ref(false);
+
+const totalUnread = computed(() =>
+  chatStore.conversations.reduce((count, item) => count + item.unreadCount, 0)
+);
+
+const cartCount = computed(() => cartStore.totalQuantity);
+
+const openChat = () => {
+  chatVisible.value = true;
+};
 
 const logout = () => {
   userStore.logout();
@@ -63,6 +97,23 @@ const goMyGoods = () => {
 const goReview = () => {
   router.push('/admin/review');
 };
+
+onMounted(() => {
+  if (userStore.isAuthenticated) {
+    cartStore.loadCart().catch(() => {});
+  }
+});
+
+watch(
+  () => userStore.isAuthenticated,
+  (loggedIn) => {
+    if (loggedIn) {
+      cartStore.loadCart().catch(() => {});
+    } else {
+      cartStore.items = [];
+    }
+  }
+);
 </script>
 
 <style scoped>
@@ -89,5 +140,21 @@ const goReview = () => {
 
 .header-actions a {
   color: #fff;
+}
+
+.header-actions :deep(.el-badge__content) {
+  background-color: #ef4444;
+  border: none;
+}
+
+.message-entry {
+  display: inline-flex;
+  align-items: center;
+}
+
+.message-entry .el-button {
+  color: #fff;
+  padding: 0;
+  height: auto;
 }
 </style>

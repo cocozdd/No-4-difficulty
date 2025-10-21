@@ -27,6 +27,7 @@
         <el-table-column prop="price" label="Price (CNY)" width="140">
           <template #default="{ row }"> {{ row.price.toFixed(2) }} </template>
         </el-table-column>
+        <el-table-column prop="quantity" label="Quantity" width="120" />
         <el-table-column label="Seller" min-width="160">
           <template #default="{ row }"> {{ row.sellerNickname }} (ID: {{ row.sellerId }}) </template>
         </el-table-column>

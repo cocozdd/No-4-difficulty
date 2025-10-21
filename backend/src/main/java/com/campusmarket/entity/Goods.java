@@ -19,6 +19,7 @@ public class Goods implements Serializable {
     private String description;
     private String category;
     private BigDecimal price;
+    private Integer quantity;
     private String coverImageUrl;
     private Long sellerId;
     @TableField("is_sold")
@@ -66,6 +67,14 @@ public class Goods implements Serializable {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 
     public String getCoverImageUrl() {

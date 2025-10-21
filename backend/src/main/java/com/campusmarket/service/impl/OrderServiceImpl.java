@@ -11,9 +11,13 @@ import com.campusmarket.entity.Order;
 import com.campusmarket.entity.OrderStatus;
 import com.campusmarket.entity.User;
 import com.campusmarket.mapper.OrderMapper;
+import com.campusmarket.service.CartService;
+import com.campusmarket.messaging.OrderEventPublisher;
+import com.campusmarket.service.GoodsMetricsService;
 import com.campusmarket.service.GoodsService;
 import com.campusmarket.service.OrderService;
 import com.campusmarket.service.UserService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
@@ -24,31 +28,54 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    private static final String ORDER_RATE_KEY_PREFIX = "rate:order:";
+    private static final int ORDER_RATE_LIMIT = 5;
+    private static final long ORDER_RATE_WINDOW_SECONDS = 60;
+
     private final OrderMapper orderMapper;
     private final GoodsService goodsService;
+    private final GoodsMetricsService goodsMetricsService;
+    private final CartService cartService;
     private final UserService userService;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final OrderEventPublisher orderEventPublisher;
 
-    public OrderServiceImpl(OrderMapper orderMapper, GoodsService goodsService, UserService userService) {
+    public OrderServiceImpl(OrderMapper orderMapper,
+                            GoodsService goodsService,
+                            GoodsMetricsService goodsMetricsService,
+                            CartService cartService,
+                            UserService userService,
+                            StringRedisTemplate stringRedisTemplate,
+                            OrderEventPublisher orderEventPublisher) {
         this.orderMapper = orderMapper;
         this.goodsService = goodsService;
+        this.goodsMetricsService = goodsMetricsService;
+        this.cartService = cartService;
         this.userService = userService;
+        this.stringRedisTemplate = stringRedisTemplate;
+        this.orderEventPublisher = orderEventPublisher;
     }
 
     @Override
     @Transactional
     public OrderResponse createOrder(Long buyerId, OrderCreateRequest request) {
         Assert.notNull(buyerId, "buyerId must not be null");
+        enforceOrderRateLimit(buyerId);
         Goods goods = goodsService.getGoodsEntity(request.getGoodsId());
         if (Boolean.TRUE.equals(goods.getDeleted())) {
             throw new IllegalStateException("Goods has been removed");
         }
         if (!GoodsStatus.APPROVED.name().equals(goods.getStatus())) {
             throw new IllegalStateException("Goods is not available for purchase");
+        }
+        if (goods.getQuantity() == null || goods.getQuantity() <= 0) {
+            throw new IllegalStateException("Goods is out of stock");
         }
         if (goods.getSellerId().equals(buyerId)) {
             throw new IllegalArgumentException("You cannot buy your own listing");
@@ -66,6 +93,9 @@ public class OrderServiceImpl implements OrderService {
         order.setUpdatedAt(LocalDateTime.now());
         orderMapper.insert(order);
         goodsService.markSold(goods.getId(), true);
+        goodsMetricsService.recordOrder(goods.getId());
+        cartService.removeCartItemsForUserGoods(buyerId, goods.getId());
+        orderEventPublisher.publishOrderCreated(order);
         return toResponse(order);
     }
 
@@ -109,12 +139,14 @@ public class OrderServiceImpl implements OrderService {
                 }
                 order.setStatus(OrderStatus.CANCELED);
                 goodsService.markSold(order.getGoodsId(), false);
+                cartService.removeCartItemsForUserGoods(order.getBuyerId(), order.getGoodsId());
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported status transition");
         }
         order.setUpdatedAt(LocalDateTime.now());
         orderMapper.updateById(order);
+        orderEventPublisher.publishOrderStatusChanged(order, current);
         return toResponse(order);
     }
 
@@ -143,6 +175,24 @@ public class OrderServiceImpl implements OrderService {
                 .sorted(Comparator.comparing(Order::getCreatedAt).reversed())
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    private void enforceOrderRateLimit(Long userId) {
+        if (stringRedisTemplate == null) {
+            return;
+        }
+        try {
+            String key = ORDER_RATE_KEY_PREFIX + userId;
+            Long current = stringRedisTemplate.opsForValue().increment(key);
+            if (current != null && current == 1) {
+                stringRedisTemplate.expire(key, ORDER_RATE_WINDOW_SECONDS, TimeUnit.SECONDS);
+            }
+            if (current != null && current > ORDER_RATE_LIMIT) {
+                throw new IllegalStateException("下单过于频繁，请稍后再试");
+            }
+        } catch (Exception ignored) {
+            // 如果 Redis 异常，跳过限流逻辑，保证主流程可用
+        }
     }
 
     private OrderResponse toResponse(Order order) {

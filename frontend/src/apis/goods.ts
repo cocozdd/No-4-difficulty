@@ -15,6 +15,7 @@ export interface GoodsItem {
   description: string;
   category: string;
   price: number;
+  quantity: number;
   coverImageUrl?: string;
   publishedAt: string;
   sellerId: number;
@@ -28,12 +29,14 @@ export interface GoodsCreatePayload {
   description: string;
   category: string;
   price: number;
+  quantity: number;
   coverImageUrl?: string;
 }
 
 export interface GoodsUpdatePayload {
   description: string;
   price: number;
+  quantity: number;
   coverImageUrl?: string;
 }
 
@@ -61,3 +64,19 @@ export const fetchPendingGoods = () => request.get<GoodsItem[]>('/goods/pending'
 
 export const reviewGoods = (id: number, payload: GoodsReviewPayload) =>
   request.put<GoodsItem>(`/goods/${id}/review`, payload);
+
+export interface HotGoodsItem {
+  goods: GoodsItem;
+  score: number;
+}
+
+export const fetchHotGoods = (limit = 6) =>
+  request.get<HotGoodsItem[]>('/goods/hot', { params: { limit } });
+
+export const recordGoodsView = (id: number) =>
+  request.post(`/goods/${id}/view`);
+
+export type RankingMetric = 'orders' | 'carts' | 'views';
+
+export const fetchGoodsRanking = (metric: RankingMetric, limit = 10) =>
+  request.get<HotGoodsItem[]>('/goods/ranking', { params: { metric, limit } });
