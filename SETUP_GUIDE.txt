@@ -31,6 +31,38 @@ Path: `backend/`
    - Auth: `/auth/login`, `/auth/register`, `/auth/profile`
    - Goods: `/goods`, `/goods/{id}`, `/goods/mine`
    - Orders: `/orders`
+6. Object storage (MinIO `RELEASE.2023-04-07T05-28-58Z` / Java SDK 8.5.2):
+   - Provision a MinIO server and create two buckets: `campus-market-goods` (for listing covers) and `campus-market-chat` (for chat attachments).
+   - Update `src/main/resources/application.yml` under the `minio` section with your endpoint URL, access key, secret key, and bucket names.
+   - Ensure the endpoint is reachable from the backend and exposes HTTP/HTTPS as configured; the service will auto-create buckets if missing.
+7. Redis 6.2.14 (Spring Data Redis 2.7.x managed by Spring Boot). 默认连接 `localhost:6379`，若部署位置不同请同步修改 `backend/src/main/resources/application.yml` 的 `spring.redis.*`。热门商品评分、埋点计数、缓存依赖 Redis。
+   - **Docker 方式（推荐）**
+     ```powershell
+     docker pull redis:6.2.14                                 # 仅首次
+     docker run -d --name campus-redis `
+       -p 6379:6379 `
+       -v f:\redis-data:/data `
+       redis:6.2.14 redis-server --appendonly yes
+
+     docker logs campus-redis                                 # 查看日志
+     docker exec -it campus-redis redis-cli ping              # 应返回 PONG
+     ```
+     - Windows 路径可按需调整；`--appendonly yes` 打开 AOF 持久化。
+     - 维护命令：
+       ```
+       docker stop campus-redis
+       docker start campus-redis
+       docker rm -f campus-redis          # 若需删除
+       ```
+   - **WSL/Linux 方式**
+     ```bash
+     sudo apt update
+     sudo apt install redis-server
+     sudo service redis-server start
+     redis-cli ping      # 返回 PONG
+     ```
+     WSL 用户可先 `wsl --install` 开启 WSL2，再在 Ubuntu 内执行上述命令。
+8. WebSocket endpoint `ws://localhost:8080/ws` (STOMP). Pass the JWT as a `token` query parameter when connecting.
 
 3. Frontend Configuration
 -------------------------
@@ -48,9 +80,11 @@ Path: `frontend/`
 4. Browse to `http://localhost:5173`.
 5. Walk through the training flow:
    - Register / login as a student account.
-   - Publish a listing (image optional; a placeholder is generated if omitted).
+   - Publish a listing (upload a cover image or leave empty for the auto-generated placeholder).
    - Log in as the admin user to review the pending listing and approve or reject it.
    - Open the detail page and place an order (the backend blocks purchasing your own listing).
+   - Use the "Contact Seller" action on the detail page to test the live WebSocket chat.
+   - Exchange a few messages and confirm the unread indicator (red dot) disappears after opening the conversation.
    - On the orders page, complete the cooperation flow: buyer pays -> seller ships -> buyer confirms receipt (with a payment simulation dialog).
    - Manage listings in "My Goods"; sold items are tagged and the release form sits alongside the list.
 
@@ -77,6 +111,7 @@ CREATE TABLE IF NOT EXISTS goods (
   description TEXT,
   category VARCHAR(64),
   price DECIMAL(10,2) NOT NULL,
+  quantity INT NOT NULL DEFAULT 1,
   cover_image_url VARCHAR(255),
   seller_id BIGINT NOT NULL,
   published_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -85,7 +120,6 @@ CREATE TABLE IF NOT EXISTS goods (
   status VARCHAR(32) NOT NULL DEFAULT 'PENDING_REVIEW',
   CONSTRAINT fk_goods_seller FOREIGN KEY (seller_id) REFERENCES user(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 CREATE TABLE IF NOT EXISTS orders (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   goods_id BIGINT NOT NULL,
@@ -96,13 +130,42 @@ CREATE TABLE IF NOT EXISTS orders (
   CONSTRAINT fk_orders_goods FOREIGN KEY (goods_id) REFERENCES goods(id),
   CONSTRAINT fk_orders_buyer FOREIGN KEY (buyer_id) REFERENCES user(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS cart_items (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  goods_id BIGINT NOT NULL,
+  quantity INT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_cart_user_goods (user_id, goods_id),
+  CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES user(id),
+  CONSTRAINT fk_cart_goods FOREIGN KEY (goods_id) REFERENCES goods(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chat_message (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  sender_id BIGINT NOT NULL,
+  receiver_id BIGINT NOT NULL,
+  content TEXT NOT NULL,
+  message_type VARCHAR(16) NOT NULL DEFAULT 'TEXT',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at DATETIME DEFAULT NULL,
+  CONSTRAINT fk_chat_message_sender FOREIGN KEY (sender_id) REFERENCES user(id),
+  CONSTRAINT fk_chat_message_receiver FOREIGN KEY (receiver_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 6. Feature Snapshot
 -------------------
 - MyBatis-Plus + MySQL persistence replaces the previous in-memory repositories.
-- Goods are marked "sold" right after purchase; canceling an order re-lists them and refreshes "My Goods".
+- Listings track inventory via the `quantity` column; purchases decrement stock and cancellations restore it, automatically flipping the sold flag when stock hits zero.
 - Order progression enforces buyer/seller cooperation: buyer pays, seller confirms shipment, buyer confirms receipt.
 - Order list shows both buyer and seller perspectives with product thumbnails and nicknames.
 - Frontend placeholder images use DummyImage links to avoid 404s.
+- Chat messages persist in the `chat_message` table (with `message_type` for text/image), stream over STOMP/WebSocket, and expose unread counters so conversations can be replayed and audited.
+- Real-time chat runs over STOMP/WebSocket (`/ws`) using the JWT token; buyers can reach sellers directly from the listing detail view and everyone has access to the global messages panel for notifications.
+- Product covers and chat attachments are stored in MinIO; uploads are validated (size/type) before generating signed URLs consumed by the frontend.
 - Listings go live only after admin approval; use `/api/goods/pending` and `/api/goods/{id}/review` for moderation.
+
+
+F:\minio>.\minio.exe server F:\minio\data --console-address ":9090"
