@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OrderEvent",
+  "type": "object",
+  "required": [
+    "eventType",
+    "orderId",
+    "goodsId",
+    "buyerId",
+    "eventTime"
+  ],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "ORDER_CREATED",
+        "ORDER_STATUS_CHANGED",
+        "TEST_EVENT"
+      ]
+    },
+    "orderId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "goodsId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "buyerId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "currentStatus": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "previousStatus": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "note": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "eventTime": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

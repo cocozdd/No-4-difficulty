@@ -1,4 +1,8 @@
 com\campusmarket\messaging\OrderEventPublisherIT.class
-com\campusmarket\messaging\GoodsEventPublisherIT.class
 com\campusmarket\kafka\KafkaIntegrationTestBase.class
 com\campusmarket\messaging\ChatEventPublisherIT.class
+com\campusmarket\messaging\GoodsEventSchemaTest.class
+com\campusmarket\messaging\GoodsEventPublisherIT.class
+com\campusmarket\messaging\ChatEventSchemaTest.class
+com\campusmarket\messaging\OrderEventSchemaTest.class
+com\campusmarket\messaging\schema\SchemaValidationUtil.class

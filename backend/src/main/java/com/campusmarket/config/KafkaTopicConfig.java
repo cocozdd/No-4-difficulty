@@ -35,6 +35,14 @@ public class KafkaTopicConfig {
     }
 
     @Bean
+    public NewTopic goodsEventsDltTopic() {
+        return TopicBuilder.name(goodsTopicName + ".DLT")
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
     public NewTopic chatEventsTopic() {
         return TopicBuilder.name(chatTopicName)
                 .partitions(3)

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ChatEvent",
+  "type": "object",
+  "required": [
+    "eventType",
+    "messageId",
+    "senderId",
+    "receiverId",
+    "messageType",
+    "eventTime"
+  ],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "CHAT_MESSAGE_CREATED"
+      ]
+    },
+    "messageId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "senderId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "receiverId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "messageType": {
+      "type": "string",
+      "enum": [
+        "TEXT",
+        "IMAGE"
+      ]
+    },
+    "contentPreview": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "eventTime": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

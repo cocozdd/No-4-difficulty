@@ -9,6 +9,7 @@ import com.campusmarket.entity.GoodsStatus;
 import com.campusmarket.mapper.GoodsMapper;
 import com.campusmarket.messaging.GoodsEventPublisher;
 import com.campusmarket.service.CartService;
+import com.campusmarket.service.GoodsCacheService;
 import com.campusmarket.service.GoodsMetricsService;
 import com.campusmarket.service.GoodsService;
 import com.campusmarket.service.HotGoodsService;
@@ -18,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
 
@@ -29,15 +29,15 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+
+import static com.campusmarket.service.impl.GoodsCacheServiceImpl.GOODS_DETAIL_KEY_PREFIX;
+import static com.campusmarket.service.impl.GoodsCacheServiceImpl.GOODS_LIST_KEY_PREFIX;
 
 @Service
 public class GoodsServiceImpl implements GoodsService {
 
-    private static final String GOODS_DETAIL_KEY_PREFIX = "goods:detail:";
-    private static final String GOODS_LIST_KEY_PREFIX = "goods:list:";
     private static final String NULL_MARKER = "__NULL__";
     private static final int DETAIL_TTL_SECONDS = 600;
     private static final int LIST_TTL_SECONDS = 180;
@@ -49,6 +49,7 @@ public class GoodsServiceImpl implements GoodsService {
     private final CartService cartService;
     private final HotGoodsService hotGoodsService;
     private final GoodsMetricsService goodsMetricsService;
+    private final GoodsCacheService goodsCacheService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
     private final GoodsEventPublisher goodsEventPublisher;
@@ -58,6 +59,7 @@ public class GoodsServiceImpl implements GoodsService {
                             CartService cartService,
                             HotGoodsService hotGoodsService,
                             GoodsMetricsService goodsMetricsService,
+                            GoodsCacheService goodsCacheService,
                             RedisTemplate<String, Object> redisTemplate,
                             ObjectMapper objectMapper,
                             GoodsEventPublisher goodsEventPublisher) {
@@ -66,6 +68,7 @@ public class GoodsServiceImpl implements GoodsService {
         this.cartService = cartService;
         this.hotGoodsService = hotGoodsService;
         this.goodsMetricsService = goodsMetricsService;
+        this.goodsCacheService = goodsCacheService;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.goodsEventPublisher = goodsEventPublisher;
@@ -423,11 +426,7 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     private void evictCachesForGoods(Long goodsId) {
-        redisTemplate.delete(GOODS_DETAIL_KEY_PREFIX + goodsId);
-        Set<String> listKeys = redisTemplate.keys(GOODS_LIST_KEY_PREFIX + "*");
-        if (!CollectionUtils.isEmpty(listKeys)) {
-            redisTemplate.delete(listKeys);
-        }
+        goodsCacheService.evictAllForGoods(goodsId);
         hotGoodsService.evictHotCache();
     }
 

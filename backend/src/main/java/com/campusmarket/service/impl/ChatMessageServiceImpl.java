@@ -6,11 +6,11 @@ import com.campusmarket.entity.ChatMessageEntity;
 import com.campusmarket.entity.User;
 import com.campusmarket.mapper.ChatMessageMapper;
 import com.campusmarket.messaging.ChatEventPublisher;
+import com.campusmarket.service.ChatCacheService;
 import com.campusmarket.service.ChatMessageService;
 import com.campusmarket.service.UserService;
 import com.campusmarket.websocket.dto.ChatConversation;
 import com.campusmarket.websocket.dto.ChatMessage;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,30 +23,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
 public class ChatMessageServiceImpl implements ChatMessageService {
 
-    private static final String UNREAD_KEY_PREFIX = "chat:unread:";
-    private static final long UNREAD_KEY_TTL_SECONDS = 7 * 24 * 3600;
-
     private final ChatMessageMapper chatMessageMapper;
     private final UserService userService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final StringRedisTemplate stringRedisTemplate;
+    private final ChatCacheService chatCacheService;
     private final ChatEventPublisher chatEventPublisher;
 
     public ChatMessageServiceImpl(ChatMessageMapper chatMessageMapper,
                                   UserService userService,
                                   SimpMessagingTemplate messagingTemplate,
-                                  StringRedisTemplate stringRedisTemplate,
+                                  ChatCacheService chatCacheService,
                                   ChatEventPublisher chatEventPublisher) {
         this.chatMessageMapper = chatMessageMapper;
         this.userService = userService;
         this.messagingTemplate = messagingTemplate;
-        this.stringRedisTemplate = stringRedisTemplate;
+        this.chatCacheService = chatCacheService;
         this.chatEventPublisher = chatEventPublisher;
     }
 
@@ -75,7 +71,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         messagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/messages", receiverMessage);
         messagingTemplate.convertAndSendToUser(senderId.toString(), "/queue/messages", senderMessage);
-        incrementUnread(receiverId, senderId);
         return senderMessage;
     }
 
@@ -105,6 +100,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         Map<Long, ChatConversation> conversations = new HashMap<>();
         Map<Long, Integer> unreadCountMap = new HashMap<>();
+        Map<Long, Integer> cachedUnreadCounts = chatCacheService.getUnreadCounts(userId);
 
         for (ChatMessageEntity entity : entities) {
             Long partnerId = entity.getSenderId().equals(userId) ? entity.getReceiverId() : entity.getSenderId();
@@ -133,7 +129,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 .peek(conv -> {
                     conv.setPartnerNickname(nicknameMap.getOrDefault(conv.getPartnerId(), ""));
                     int dbUnread = unreadCountMap.getOrDefault(conv.getPartnerId(), 0);
-                    int redisUnread = getUnreadFromCache(userId, conv.getPartnerId());
+                    int redisUnread = cachedUnreadCounts.getOrDefault(conv.getPartnerId(), 0);
                     conv.setUnreadCount(Math.max(dbUnread, redisUnread));
                 })
                 .sorted(Comparator.comparing(ChatConversation::getLastMessageAt).reversed())
@@ -148,7 +144,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 .eq(ChatMessageEntity::getReceiverId, userId)
                 .eq(ChatMessageEntity::getSenderId, partnerId)
                 .isNull(ChatMessageEntity::getReadAt));
-        clearUnread(userId, partnerId);
+        chatCacheService.clearUnread(userId, partnerId);
     }
 
     private String buildPreview(ChatMessageEntity entity) {
@@ -222,45 +218,4 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         return "TEXT";
     }
 
-    private void incrementUnread(Long receiverId, Long senderId) {
-        if (stringRedisTemplate == null) {
-            return;
-        }
-        try {
-            String key = UNREAD_KEY_PREFIX + receiverId;
-            Long value = stringRedisTemplate.opsForHash()
-                    .increment(key, senderId.toString(), 1);
-            if (value != null && value == 1L) {
-                stringRedisTemplate.expire(key, UNREAD_KEY_TTL_SECONDS, TimeUnit.SECONDS);
-            }
-        } catch (Exception ignored) {
-        }
-    }
-
-    private void clearUnread(Long userId, Long partnerId) {
-        if (stringRedisTemplate == null) {
-            return;
-        }
-        try {
-            stringRedisTemplate.opsForHash()
-                    .delete(UNREAD_KEY_PREFIX + userId, partnerId.toString());
-        } catch (Exception ignored) {
-        }
-    }
-
-    private int getUnreadFromCache(Long userId, Long partnerId) {
-        if (stringRedisTemplate == null) {
-            return 0;
-        }
-        try {
-            Object raw = stringRedisTemplate.opsForHash()
-                    .get(UNREAD_KEY_PREFIX + userId, partnerId.toString());
-            if (raw == null) {
-                return 0;
-            }
-            return Integer.parseInt(raw.toString());
-        } catch (Exception ignored) {
-            return 0;
-        }
-    }
 }

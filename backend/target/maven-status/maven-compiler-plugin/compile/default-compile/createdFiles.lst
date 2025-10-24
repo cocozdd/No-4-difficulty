@@ -3,7 +3,10 @@ com\campusmarket\messaging\ChatEventListener.class
 com\campusmarket\controller\KafkaDiagnosticsController.class
 com\campusmarket\messaging\OrderEventListener.class
 com\campusmarket\messaging\GoodsEventListener.class
+com\campusmarket\service\impl\GoodsCacheServiceImpl.class
+com\campusmarket\service\GoodsCacheService.class
 com\campusmarket\service\impl\GoodsEventProcessor$1.class
+com\campusmarket\service\impl\ChatEventProcessor.class
 com\campusmarket\service\impl\GoodsEventProcessor.class
 com\campusmarket\messaging\OrderEventType.class
 com\campusmarket\dto\KafkaTestResponse.class
@@ -13,6 +16,8 @@ com\campusmarket\service\ChatMetricsService.class
 com\campusmarket\messaging\ChatEvent.class
 com\campusmarket\messaging\OrderEvent.class
 com\campusmarket\config\KafkaTopicConfig.class
+com\campusmarket\service\ChatCacheService.class
+com\campusmarket\service\impl\ChatCacheServiceImpl.class
 com\campusmarket\config\KafkaListenerConfig$1.class
 com\campusmarket\messaging\GoodsEventPublisher.class
 com\campusmarket\messaging\ChatEventPublisher.class

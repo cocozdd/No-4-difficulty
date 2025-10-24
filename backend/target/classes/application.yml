@@ -63,3 +63,12 @@ app:
     order-topic: order-events
     goods-topic: goods-events
     chat-topic: chat-events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    tags:
+      application: campus-market

@@ -1,6 +1,6 @@
 package com.campusmarket.messaging;
 
-import com.campusmarket.service.ChatMetricsService;
+import com.campusmarket.service.impl.ChatEventProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -11,10 +11,10 @@ public class ChatEventListener {
 
     private static final Logger log = LoggerFactory.getLogger(ChatEventListener.class);
 
-    private final ChatMetricsService chatMetricsService;
+    private final ChatEventProcessor chatEventProcessor;
 
-    public ChatEventListener(ChatMetricsService chatMetricsService) {
-        this.chatMetricsService = chatMetricsService;
+    public ChatEventListener(ChatEventProcessor chatEventProcessor) {
+        this.chatEventProcessor = chatEventProcessor;
     }
 
     @KafkaListener(
@@ -28,6 +28,6 @@ public class ChatEventListener {
                 event.getSenderId(),
                 event.getReceiverId(),
                 event.getContentPreview());
-        chatMetricsService.recordMessageCreated(event.getSenderId(), event.getReceiverId());
+        chatEventProcessor.handle(event);
     }
 }

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GoodsEvent",
+  "type": "object",
+  "required": [
+    "eventType",
+    "goodsId",
+    "sellerId",
+    "eventTime"
+  ],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "GOODS_CREATED",
+        "GOODS_UPDATED",
+        "GOODS_DELETED",
+        "GOODS_REVIEWED",
+        "GOODS_MARKED_SOLD",
+        "GOODS_VIEWED"
+      ]
+    },
+    "goodsId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sellerId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "actorId": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "currentStatus": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "quantity": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "note": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "eventTime": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

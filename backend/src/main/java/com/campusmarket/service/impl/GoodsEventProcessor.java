@@ -2,6 +2,7 @@ package com.campusmarket.service.impl;
 
 import com.campusmarket.messaging.GoodsEvent;
 import com.campusmarket.messaging.GoodsEventType;
+import com.campusmarket.service.GoodsCacheService;
 import com.campusmarket.service.GoodsMetricsService;
 import com.campusmarket.service.HotGoodsService;
 import org.slf4j.Logger;
@@ -15,11 +16,14 @@ public class GoodsEventProcessor {
 
     private final GoodsMetricsService goodsMetricsService;
     private final HotGoodsService hotGoodsService;
+    private final GoodsCacheService goodsCacheService;
 
     public GoodsEventProcessor(GoodsMetricsService goodsMetricsService,
-                               HotGoodsService hotGoodsService) {
+                               HotGoodsService hotGoodsService,
+                               GoodsCacheService goodsCacheService) {
         this.goodsMetricsService = goodsMetricsService;
         this.hotGoodsService = hotGoodsService;
+        this.goodsCacheService = goodsCacheService;
     }
 
     public void handle(GoodsEvent event) {
@@ -32,22 +36,34 @@ public class GoodsEventProcessor {
             return;
         }
         try {
+            boolean evictCaches = false;
+            boolean dropMetrics = false;
             switch (type) {
                 case GOODS_VIEWED:
                     goodsMetricsService.recordView(event.getGoodsId());
                     break;
                 case GOODS_DELETED:
-                    goodsMetricsService.removeMetrics(event.getGoodsId());
-                    hotGoodsService.evictHotCache();
+                    dropMetrics = true;
+                    evictCaches = true;
+                    break;
+                case GOODS_MARKED_SOLD:
+                    dropMetrics = true;
+                    evictCaches = true;
                     break;
                 case GOODS_CREATED:
                 case GOODS_UPDATED:
                 case GOODS_REVIEWED:
-                case GOODS_MARKED_SOLD:
-                    hotGoodsService.evictHotCache();
+                    evictCaches = true;
                     break;
                 default:
                     log.debug("Unhandled goods event type: {}", type);
+            }
+            if (dropMetrics) {
+                goodsMetricsService.removeMetrics(event.getGoodsId());
+            }
+            if (evictCaches) {
+                goodsCacheService.evictAllForGoods(event.getGoodsId());
+                hotGoodsService.evictHotCache();
             }
         } catch (RuntimeException ex) {
             log.warn("Failed to process goods event: {}", event, ex);
