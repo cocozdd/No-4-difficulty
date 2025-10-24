@@ -12,8 +12,7 @@ public class OrderEventListener {
 
     @KafkaListener(topics = "${app.kafka.order-topic:order-events}", groupId = "${spring.kafka.consumer.group-id}")
     public void handleOrderEvent(OrderEvent event) {
-        log.info("Received order event: type={}, orderId={}, status={}",
-                event.getEventType(), event.getOrderId(), event.getCurrentStatus());
+        log.info("Received order event: type={}, orderId={}, status={}, note={}",
+                event.getEventType(), event.getOrderId(), event.getCurrentStatus(), event.getNote());
     }
 }
-

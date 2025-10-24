@@ -1,65 +1,93 @@
-Kafka Integration Plan – Interview Reference
-============================================
+Kafka 集成落地方案
+==================
 
-1. 引入目标
------------
-当前下单、缓存刷新、通知推送等逻辑仍是同步串行执行，高峰时接口耗时长、服务耦合度高。引入 Kafka 作为事件总线，解决以下问题：
-
-- **削峰填谷**：订单创建等热点操作先写入消息队列，由消费者异步处理（缓存刷新、通知提醒），缩短主流程响应时间。
-- **服务解耦**：订单、通知、统计、推荐等模块通过事件交互，降低直接依赖，方便独立扩展与部署。
-- **可追溯性**：Kafka 自带日志持久化，支持重放与补偿处理，为风控、审计、BI 提供数据来源。
-
-2. 规划的 Topic 与事件
------------------------
-| Topic            | 事件类型                | 生产者            | 主要消费者             |
-|------------------|------------------------|-------------------|------------------------|
-| `order-events`   | `ORDER_CREATED`, `ORDER_STATUS_CHANGED` | 订单服务 | 通知服务、缓存刷新、统计服务 |
-| `goods-events`   | `GOODS_VIEWED`, `GOODS_UPDATED`         | 商品服务 | 热度排行、搜索索引、推荐服务 |
-| `chat-events`    | `CHAT_MESSAGE_CREATED`                  | 聊天服务 | 推送服务、审计日志          |
-
-- 事件格式：统一 JSON（或 Avro）结构，包含 `eventType`, `timestamp`, `payload`, `version` 等字段，便于扩展。
-- key 策略：使用业务主键（如 `orderId`、`goodsId`、`messageId`）保证同一实体的事件落在同一分区，以保持顺序。
-
-3. 生产者（Producer）改造
---------------------------
-1. 抽象 `EventPublisher` 组件，封装 Kafka Producer 配置（序列化器、重试次数、acks 等）。
-2. 在业务逻辑成功提交数据库事务后发布事件，例如：
-   - 订单创建成功 → 发布 `ORDER_CREATED`；
-   - 商品审核通过 → 发布 `GOODS_UPDATED`；
-   - 聊天消息保存成功 → 发布 `CHAT_MESSAGE_CREATED`。
-3. 失败处理：启用 Kafka Producer 重试；记录发送结果，必要时补偿（人工或自动重放）。
-
-4. 消费者（Consumer）设计
--------------------------
-- **通知服务**：订阅 `order-events` / `chat-events`，向买卖双方发送站内信、邮件或 WebSocket 推送。
-- **缓存刷新服务**：订阅 `goods-events` / `order-events`，异步更新 Redis 热度和排行榜。
-- **统计/BI 服务**：消费所有业务事件，汇总行为数据，提供报表与实时监控。
-- **搜索索引服务（如接 Elasticsearch）**：收到 `GOODS_UPDATED` 后更新商品搜索索引。
-
-消费策略：
-- 创建独立的 Consumer Group，支持水平扩展。
-- 消费代码需要幂等（重复消息不产生副作用），可借助 Redis Set 或数据库唯一键判断是否处理过。
-- 对于处理失败，采用 Spring Kafka 的 `SeekToCurrentErrorHandler` 或自定义重试策略，实在无法处理则写入死信队列。
-
-5. 运维与监控
+1. 背景与目标
 --------------
-- **部署**：开发环境可用 Docker Compose，生产环境建议使用高可用集群（3+ broker），并启用认证/ACL。
-- **监控**：接入 Prometheus + Grafana，关注生产/消费速率、延迟、失败次数、Lag；也可使用 Kafka Manager/Confluent Control Center。
-- **日志**：按事件 ID、类型记录消费日志，方便排查与追踪。
-- **Schema 管理**：如后续采用 Avro，可引入 Schema Registry 统一管理消息格式。
+- 订单创建、缓存刷新、通知推送等链路仍是同步串行，峰值时响应慢、耦合高。
+- 引入 Kafka 作为事件总线，以削峰填谷、模块解耦、事件追溯为核心目标，并为后续 BI/推荐等数据消费提供统一入口。
 
-6. 与现有系统的协作
---------------------
-- Redis：依旧负责热点缓存、排行榜、限流。Kafka 事件消费者会据此刷新/写入 Redis，实现异步化。
-- MinIO、数据库等逻辑保持不变，由事件异步触发相关操作（如清理文件、调整库存）。
-- 若后续引入其他中间件（搜索、配置中心），可以通过 Kafka 事件进行同步，不会产生冲突。
+2. 当前进度概览
+----------------
+- **基础设施**：本地单节点（Bitnami 3.7 镜像）已可用，主题 `order-events`、`__consumer_offsets` 已创建，PLAINTEXT 监听 `localhost:9092`。
+- **应用改造**：
+  - `OrderEventPublisher` 已输出 `ORDER_CREATED`、`ORDER_STATUS_CHANGED` 事件。
+  - 新增 `KafkaDiagnosticsController`/`Service`，支持发送 `TEST_EVENT` 诊断消息。
+  - `OrderEventListener` 打印消费日志，包含 `note` 字段便于排查。
+- **前端联调**：Home 页在开发模式下提供 “Kafka 快速测试” 面板，可直接调用诊断接口并回显结果。
+- **文档支持**：`SETUP_GUIDE.txt` 已补充 CLI/接口/前端三种验证路径。
 
-7. 实施步骤总结
+3. 目标 Topic 与事件模型
+------------------------
+| Topic          | 事件类型                                       | 生产者             | 主要消费者                     |
+|----------------|------------------------------------------------|--------------------|--------------------------------|
+| `order-events` | `ORDER_CREATED`、`ORDER_STATUS_CHANGED`、`TEST_EVENT` | 订单服务（已接入） | 通知、缓存刷新、统计、诊断面板 |
+| `goods-events` | `GOODS_VIEWED`、`GOODS_UPDATED`                | 商品服务（待接入） | 热度排行、搜索、推荐           |
+| `chat-events`  | `CHAT_MESSAGE_CREATED`                         | 聊天服务（待接入） | 推送服务、审计日志              |
+
+- 事件结构（JSON）：`eventType`、`orderId/goodsId/...`、`currentStatus`、`previousStatus`、`eventTime`、`note`（可选）。
+- Key 策略：默认使用业务主键，若缺省则回退 `diag-<UUID>`。
+
+4. 生产端改造路线
 -----------------
-1. 落地 Kafka 集群并配置基础 Topic。
-2. 抽象统一事件模型与发布组件，完成订单、商品、聊天等生产端改造。
-3. 编写消费者服务，按功能拆模块，处理幂等、补偿与监控。
-4. 更新架构文档与 `SETUP_GUIDE`，记录部署流程与调试方法。
-5. 编写集成测试（可使用 Testcontainers Kafka）验证生产/消费链路。
+1. **整合抽象**：统一封装 `EventPublisher`，设置序列化器、ACK、重试策略，做到可注入、易扩展。
+2. **事务对接**：在数据库事务完成后发布事件；针对聊天/缓存刷新等场景预留 Hook。
+3. **失败补偿**：记录发送结果（`CompletableFuture` 回调），落地告警/补偿（告警表或重放 Job）。
+4. **附加字段**：支持自定义 `note`，从源头携带业务上下文、操作者信息。
 
-— 以上内容可作为面试时的讲稿/文档参考 —
+5. 消费端设计
+-------------
+- **通知服务**：监听订单/聊天事件，推送站内信、WebSocket、邮件。
+- **缓存服务**：根据订单/商品事件异步刷新 Redis 缓存及排行榜。
+- **统计与 BI**：批量消费所有事件，拆分实时流计算与离线入仓。
+- **错误处理**：使用 `SeekToCurrentErrorHandler`（或 `DeadLetterPublishingRecoverer`）进行重试 + 死信兜底；所有消费逻辑必须幂等（Redis Set、唯一键、去重表）。
+
+6. 运维与监控
+-------------
+- **环境部署**：开发用 Docker 单节点；联调/生产采用 KRaft 多 Broker，开启 `auto.create.topics.enable=false` 并预建主题。
+- **监控指标**：采集生产/消费速率、Lag、失败次数；推荐接入 Prometheus + Grafana 或 Kafka Manager。
+- **日志规范**：以事件 ID、类型、调用链标识落日志，便于排障与补偿。
+- **Schema 管理**：短期 JSON，后续可引入 Schema Registry（Avro/JSON Schema）统一约束。
+
+7. 开发与测试清单
+-----------------
+- **单元/集成测试**：
+  - 使用 Spring Kafka 的 `EmbeddedKafka` 或 Testcontainers 编写发布/消费集成测试。
+  - 为关键消费者增加幂等性与重试场景用例。
+- **手动验证手册**：
+  1. CLI：`kafka-console-producer` + `kafka-console-consumer --from-beginning --timeout-ms 5000`。
+  2. 后端接口：`POST /api/diagnostics/kafka/order-events`，确认响应包含 topic/key/time，日志打印 `TEST_EVENT`。
+  3. 前端：运行 `npm run dev`，在首页“Kafka 快速测试”卡片发送消息，确认界面回显与后台日志同步。
+  4. 消费组：`kafka-consumer-groups.sh --describe` 查看 Lag，应为 0。
+  5. Use kafka-console-producer to push an invalid JSON payload (for example the plain text invalid) into order-events; the log should show the retry attempts from the new DefaultErrorHandler.
+  6. kafka-topics.sh --list should now include goods-events and chat-events; recreate the cluster or rerun the app to verify auto-creation works.
+- **CI 建议**：构建阶段拉起 Testcontainers Kafka，跑生产者/消费者链路测试；静态检查确保 Topic/事件常量统一管理。
+
+8. 后续迭代计划
+----------------
+1. 扩展 `goods-events`、`chat-events`，并补充对应消费者。
+2. 建立统一事件规范文档（字段、版本、兼容策略），配合 Schema Registry。
+3. 引入流处理（Kafka Streams / Flink）构建实时榜单与告警。
+4. 打通监控告警链路（Lag 超阈值、消费失败率、Broker 健康），接入企业 IM。
+5. 结合 Redis 分布式锁及 Kafka 事务确保库存、支付等强一致场景。
+
+附录：常用命令速查
+------------------
+```powershell
+# 查看主题
+docker exec campus-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+# 描述主题
+docker exec campus-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic order-events
+
+# 生产消息（PowerShell）
+"test" | docker exec -i campus-kafka /opt/kafka/bin/kafka-console-producer.sh `
+  --bootstrap-server localhost:9092 --topic order-events
+
+# 消费消息并 5 秒无输入自动退出
+docker exec campus-kafka /opt/kafka/bin/kafka-console-consumer.sh `
+  --bootstrap-server localhost:9092 --topic order-events --from-beginning --timeout-ms 5000
+
+# 查看消费组偏移
+docker exec campus-kafka /opt/kafka/bin/kafka-consumer-groups.sh `
+  --bootstrap-server localhost:9092 --describe --group quick-check
+```

@@ -12,6 +12,12 @@ public class KafkaTopicConfig {
     @Value("${app.kafka.order-topic:order-events}")
     private String orderTopicName;
 
+    @Value("${app.kafka.goods-topic:goods-events}")
+    private String goodsTopicName;
+
+    @Value("${app.kafka.chat-topic:chat-events}")
+    private String chatTopicName;
+
     @Bean
     public NewTopic orderEventsTopic() {
         return TopicBuilder.name(orderTopicName)
@@ -19,5 +25,20 @@ public class KafkaTopicConfig {
                 .replicas(1)
                 .build();
     }
-}
 
+    @Bean
+    public NewTopic goodsEventsTopic() {
+        return TopicBuilder.name(goodsTopicName)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic chatEventsTopic() {
+        return TopicBuilder.name(chatTopicName)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+}

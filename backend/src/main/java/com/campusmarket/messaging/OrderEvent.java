@@ -10,6 +10,7 @@ public class OrderEvent {
     private Long buyerId;
     private String currentStatus;
     private String previousStatus;
+    private String note;
     private LocalDateTime eventTime;
 
     public OrderEvent() {
@@ -79,6 +80,14 @@ public class OrderEvent {
         this.previousStatus = previousStatus;
     }
 
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
+
     public LocalDateTime getEventTime() {
         return eventTime;
     }
@@ -87,4 +96,3 @@ public class OrderEvent {
         this.eventTime = eventTime;
     }
 }
-

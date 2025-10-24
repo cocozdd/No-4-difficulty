@@ -9,7 +9,8 @@ import com.campusmarket.dto.HotGoodsItemResponse;
 import com.campusmarket.entity.Goods;
 import com.campusmarket.entity.GoodsStatus;
 import com.campusmarket.entity.User;
-import com.campusmarket.service.GoodsMetricsService;
+import com.campusmarket.messaging.GoodsEventPublisher;
+
 import com.campusmarket.service.GoodsService;
 import com.campusmarket.service.HotGoodsService;
 import org.springframework.http.HttpStatus;
@@ -36,14 +37,14 @@ public class GoodsController {
 
     private final GoodsService goodsService;
     private final HotGoodsService hotGoodsService;
-    private final GoodsMetricsService goodsMetricsService;
+    private final GoodsEventPublisher goodsEventPublisher;
 
     public GoodsController(GoodsService goodsService,
                            HotGoodsService hotGoodsService,
-                           GoodsMetricsService goodsMetricsService) {
+                           GoodsEventPublisher goodsEventPublisher) {
         this.goodsService = goodsService;
         this.hotGoodsService = hotGoodsService;
-        this.goodsMetricsService = goodsMetricsService;
+        this.goodsEventPublisher = goodsEventPublisher;
     }
 
     @GetMapping
@@ -132,11 +133,13 @@ public class GoodsController {
 
     @PostMapping("/{id}/view")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void recordView(@PathVariable Long id) {
+    public void recordView(@PathVariable Long id,
+                           @AuthenticationPrincipal User user) {
         try {
             Goods goods = goodsService.getGoodsEntity(id);
             if (GoodsStatus.APPROVED.name().equals(goods.getStatus())) {
-                goodsMetricsService.recordView(id);
+                Long viewerId = user == null ? null : user.getId();
+                goodsEventPublisher.publishGoodsViewed(id, goods.getSellerId(), viewerId);
             }
         } catch (IllegalArgumentException ignored) {
         }

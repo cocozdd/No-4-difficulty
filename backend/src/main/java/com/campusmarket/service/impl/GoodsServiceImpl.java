@@ -7,6 +7,7 @@ import com.campusmarket.dto.GoodsUpdateRequest;
 import com.campusmarket.entity.Goods;
 import com.campusmarket.entity.GoodsStatus;
 import com.campusmarket.mapper.GoodsMapper;
+import com.campusmarket.messaging.GoodsEventPublisher;
 import com.campusmarket.service.CartService;
 import com.campusmarket.service.GoodsMetricsService;
 import com.campusmarket.service.GoodsService;
@@ -50,6 +51,7 @@ public class GoodsServiceImpl implements GoodsService {
     private final GoodsMetricsService goodsMetricsService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final GoodsEventPublisher goodsEventPublisher;
 
     public GoodsServiceImpl(GoodsMapper goodsMapper,
                             UserService userService,
@@ -57,7 +59,8 @@ public class GoodsServiceImpl implements GoodsService {
                             HotGoodsService hotGoodsService,
                             GoodsMetricsService goodsMetricsService,
                             RedisTemplate<String, Object> redisTemplate,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,
+                            GoodsEventPublisher goodsEventPublisher) {
         this.goodsMapper = goodsMapper;
         this.userService = userService;
         this.cartService = cartService;
@@ -65,6 +68,7 @@ public class GoodsServiceImpl implements GoodsService {
         this.goodsMetricsService = goodsMetricsService;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.goodsEventPublisher = goodsEventPublisher;
     }
 
     @PostConstruct
@@ -205,6 +209,7 @@ public class GoodsServiceImpl implements GoodsService {
         }
         goodsMapper.insert(goods);
         evictCachesForGoods(goods.getId());
+        goodsEventPublisher.publishGoodsCreated(goods);
         return goods;
     }
 
@@ -233,6 +238,7 @@ public class GoodsServiceImpl implements GoodsService {
         goods.setStatus(GoodsStatus.PENDING_REVIEW.name());
         goodsMapper.updateById(goods);
         evictCachesForGoods(goods.getId());
+        goodsEventPublisher.publishGoodsUpdated(goods, sellerId, "Seller updated goods and reset status to pending review");
         return toResponse(goods);
     }
 
@@ -252,6 +258,7 @@ public class GoodsServiceImpl implements GoodsService {
         goodsMapper.updateById(goods);
         evictCachesForGoods(id);
         goodsMetricsService.removeMetrics(id);
+        goodsEventPublisher.publishGoodsDeleted(goods, sellerId);
     }
 
     @Override
@@ -296,6 +303,7 @@ public class GoodsServiceImpl implements GoodsService {
         goods.setSold(goods.getQuantity() != null && goods.getQuantity() <= 0);
         goodsMapper.updateById(goods);
         evictCachesForGoods(id);
+        goodsEventPublisher.publishGoodsReviewed(goods, null, "Status updated to " + status.name());
         return toResponse(goods);
     }
 
@@ -321,6 +329,7 @@ public class GoodsServiceImpl implements GoodsService {
             cartService.removeCartItemsByGoodsId(goodsId);
         }
         evictCachesForGoods(goodsId);
+        goodsEventPublisher.publishGoodsMarkedSold(goods, null);
     }
 
     private GoodsResponse toResponse(Goods goods) {

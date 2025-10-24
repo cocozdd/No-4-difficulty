@@ -15,10 +15,10 @@ public class OrderEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(OrderEventPublisher.class);
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
     private final String orderTopic;
 
-    public OrderEventPublisher(KafkaTemplate<String, Object> kafkaTemplate,
+    public OrderEventPublisher(KafkaTemplate<String, OrderEvent> kafkaTemplate,
                                @Value("${app.kafka.order-topic:order-events}") String orderTopic) {
         this.kafkaTemplate = kafkaTemplate;
         this.orderTopic = orderTopic;
@@ -69,4 +69,3 @@ public class OrderEventPublisher {
         return status == null ? null : status.name();
     }
 }
-

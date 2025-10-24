@@ -189,5 +189,18 @@ F:\minio>.\minio.exe server F:\minio\data --console-address ":9090"
      docker exec -it campus-kafka kafka-topics.sh --bootstrap-server localhost:9092 --list
      docker exec -it campus-kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-events --from-beginning
      ```
+   - Backend quick test:
+     - Send a `POST http://localhost:8080/api/diagnostics/kafka/order-events` request with JSON payload:
+       ```json
+       {
+         "message": "Kafka smoke test",
+         "orderId": 99990001,
+         "goodsId": 9001,
+         "buyerId": 3001,
+         "currentStatus": "TEST"
+       }
+       ```
+       The response echoes topic/key/timestamp, and backend logs show a `TEST_EVENT`.
+     - Frontend dev mode (`npm run dev`) reveals a "Kafka Quick Test" card on the home page; submit a message there for an end-to-end check.
    - Spring Boot 已通过 `spring-kafka` 集成，订单事件会发布到 `${app.kafka.order-topic}`（默认 `order-events`）。
    - 生产环境请配置多节点、副本、ACL，并配合 Prometheus/Grafana 或 Kafka Manager 进行监控。

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.campusmarket.entity.ChatMessageEntity;
 import com.campusmarket.entity.User;
 import com.campusmarket.mapper.ChatMessageMapper;
+import com.campusmarket.messaging.ChatEventPublisher;
 import com.campusmarket.service.ChatMessageService;
 import com.campusmarket.service.UserService;
 import com.campusmarket.websocket.dto.ChatConversation;
@@ -35,15 +36,18 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final UserService userService;
     private final SimpMessagingTemplate messagingTemplate;
     private final StringRedisTemplate stringRedisTemplate;
+    private final ChatEventPublisher chatEventPublisher;
 
     public ChatMessageServiceImpl(ChatMessageMapper chatMessageMapper,
                                   UserService userService,
                                   SimpMessagingTemplate messagingTemplate,
-                                  StringRedisTemplate stringRedisTemplate) {
+                                  StringRedisTemplate stringRedisTemplate,
+                                  ChatEventPublisher chatEventPublisher) {
         this.chatMessageMapper = chatMessageMapper;
         this.userService = userService;
         this.messagingTemplate = messagingTemplate;
         this.stringRedisTemplate = stringRedisTemplate;
+        this.chatEventPublisher = chatEventPublisher;
     }
 
     @Override
@@ -57,6 +61,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setReadAt(null);
         chatMessageMapper.insert(entity);
+        chatEventPublisher.publishMessageCreated(
+                entity.getId(),
+                senderId,
+                receiverId,
+                entity.getMessageType(),
+                buildPreview(entity)
+        );
 
         Map<Long, User> cache = new HashMap<>();
         ChatMessage senderMessage = toDto(entity, senderId, true, cache);
