@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint)
                 .and()
                 .authorizeRequests()
-                .antMatchers("/api/auth/**").permitAll()
+                .antMatchers("/api/auth/login", "/api/auth/register").permitAll()
                 .antMatchers("/actuator/prometheus").permitAll()
                 .antMatchers("/ws/**").permitAll()
                 .antMatchers("/api/admin/**").hasRole("ADMIN")

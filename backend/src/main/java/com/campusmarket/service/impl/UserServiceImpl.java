@@ -63,8 +63,10 @@ public class UserServiceImpl implements UserService {
         user.setPhone(request.getPhone());
         user.setCreatedAt(LocalDateTime.now());
         userMapper.insert(user);
+        Long userId = user.getId();
         String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole());
-        return new AuthResponse(token, user.getRole(), user.getNickname());
+        return new AuthResponse(userId, user.getUsername(), token, user.getRole(), user.getNickname(),
+                jwtTokenProvider.getExpirationMs());
     }
 
     @Override
@@ -74,7 +76,8 @@ public class UserServiceImpl implements UserService {
             throw new BadCredentialsException("用户名或密码错误");
         }
         String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole());
-        return new AuthResponse(token, user.getRole(), user.getNickname());
+        return new AuthResponse(user.getId(), user.getUsername(), token, user.getRole(), user.getNickname(),
+                jwtTokenProvider.getExpirationMs());
     }
 
     @Override

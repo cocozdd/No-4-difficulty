@@ -1,7 +1,9 @@
 package com.campusmarket.security.jwt;
 
 import com.campusmarket.entity.User;
+import com.campusmarket.service.LoginSessionService;
 import com.campusmarket.service.UserService;
+import com.campusmarket.service.LoginSessionService.LoginSession;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,10 +25,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
     private final UserService userService;
+    private final LoginSessionService loginSessionService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserService userService) {
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider,
+                                   UserService userService,
+                                   LoginSessionService loginSessionService) {
         this.tokenProvider = tokenProvider;
         this.userService = userService;
+        this.loginSessionService = loginSessionService;
     }
 
     @Override
@@ -34,15 +40,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String jwt = resolveToken(request);
         if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-            Long userId = tokenProvider.getUserId(jwt);
-            User user = userService.findById(userId);
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    user,
-                    null,
-                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
-            );
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            LoginSession session = loginSessionService.getSession(jwt).orElse(null);
+            if (session != null) {
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        user,
+                        null,
+                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+                );
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                loginSessionService.refreshSession(jwt);
+            }
         }
         filterChain.doFilter(request, response);
     }
