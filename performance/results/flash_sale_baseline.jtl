@@ -1,0 +1,101 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect
+1761469497039,240,Login,200,,Flash Sale Users 1-1,text,true,,767,262,2,2,http://localhost:8080/api/auth/login,239,0,31
+1761469497424,94,Login,200,,Flash Sale Users 1-2,text,true,,767,262,2,2,http://localhost:8080/api/auth/login,94,0,1
+1761469497546,96,Purchase,400,,Flash Sale Users 1-1,text,false,Test failed: text expected to contain /orderId/,463,455,2,2,http://localhost:8080/api/flash-sale/purchase,95,0,0
+1761469497733,13,Purchase,400,,Flash Sale Users 1-2,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469498023,83,Login,200,,Flash Sale Users 1-3,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,83,0,1
+1761469498308,14,Purchase,400,,Flash Sale Users 1-3,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469498619,74,Login,200,,Flash Sale Users 1-4,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,74,0,1
+1761469498894,16,Purchase,400,,Flash Sale Users 1-4,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,16,0,0
+1761469499208,73,Login,200,,Flash Sale Users 1-5,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,0
+1761469499482,13,Purchase,400,,Flash Sale Users 1-5,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469499813,74,Login,200,,Flash Sale Users 1-6,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,74,0,1
+1761469500088,18,Purchase,400,,Flash Sale Users 1-6,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,18,0,0
+1761469500415,77,Login,200,,Flash Sale Users 1-7,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,77,0,2
+1761469500694,14,Purchase,400,,Flash Sale Users 1-7,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469501003,73,Login,200,,Flash Sale Users 1-8,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,1
+1761469501277,13,Purchase,400,,Flash Sale Users 1-8,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469501612,76,Login,200,,Flash Sale Users 1-9,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,75,0,2
+1761469501888,16,Purchase,400,,Flash Sale Users 1-9,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,16,0,0
+1761469502202,73,Login,200,,Flash Sale Users 1-10,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,1
+1761469502476,14,Purchase,400,,Flash Sale Users 1-10,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469502807,74,Login,200,,Flash Sale Users 1-11,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,74,0,1
+1761469503082,20,Purchase,400,,Flash Sale Users 1-11,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,20,0,0
+1761469503394,76,Login,200,,Flash Sale Users 1-12,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,75,0,2
+1761469503674,14,Purchase,400,,Flash Sale Users 1-12,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469504001,75,Login,200,,Flash Sale Users 1-13,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,75,0,1
+1761469504277,13,Purchase,400,,Flash Sale Users 1-13,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469504601,75,Login,200,,Flash Sale Users 1-14,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,75,0,2
+1761469504877,13,Purchase,400,,Flash Sale Users 1-14,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469505205,74,Login,200,,Flash Sale Users 1-15,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,74,0,1
+1761469505484,13,Purchase,400,,Flash Sale Users 1-15,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469505810,77,Login,200,,Flash Sale Users 1-16,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,77,0,1
+1761469506088,17,Purchase,400,,Flash Sale Users 1-16,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,17,0,0
+1761469506401,75,Login,200,,Flash Sale Users 1-17,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,74,0,2
+1761469506680,14,Purchase,400,,Flash Sale Users 1-17,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469506994,76,Login,200,,Flash Sale Users 1-18,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,75,0,0
+1761469507271,13,Purchase,400,,Flash Sale Users 1-18,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,12,0,0
+1761469507594,81,Login,200,,Flash Sale Users 1-19,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,81,0,2
+1761469507876,14,Purchase,400,,Flash Sale Users 1-19,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469508193,78,Login,200,,Flash Sale Users 1-20,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,78,0,2
+1761469508472,29,Purchase,400,,Flash Sale Users 1-20,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,28,0,0
+1761469508790,83,Login,200,,Flash Sale Users 1-21,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,83,0,1
+1761469509080,15,Purchase,400,,Flash Sale Users 1-21,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,15,0,0
+1761469509417,83,Login,200,,Flash Sale Users 1-22,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,83,0,1
+1761469509710,13,Purchase,400,,Flash Sale Users 1-22,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469510004,77,Login,200,,Flash Sale Users 1-23,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,77,0,2
+1761469510295,15,Purchase,400,,Flash Sale Users 1-23,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,15,0,0
+1761469510603,74,Login,200,,Flash Sale Users 1-24,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,74,0,1
+1761469510878,35,Purchase,400,,Flash Sale Users 1-24,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,35,0,0
+1761469511187,78,Login,200,,Flash Sale Users 1-25,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,78,0,1
+1761469511467,13,Purchase,400,,Flash Sale Users 1-25,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469511801,80,Login,200,,Flash Sale Users 1-26,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,80,0,1
+1761469512083,16,Purchase,400,,Flash Sale Users 1-26,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,16,0,0
+1761469512403,75,Login,200,,Flash Sale Users 1-27,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,75,0,1
+1761469512693,14,Purchase,400,,Flash Sale Users 1-27,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469512990,90,Login,200,,Flash Sale Users 1-28,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,90,0,1
+1761469513281,13,Purchase,400,,Flash Sale Users 1-28,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469513594,78,Login,200,,Flash Sale Users 1-29,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,78,0,1
+1761469513888,17,Purchase,400,,Flash Sale Users 1-29,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,17,0,0
+1761469514182,73,Login,200,,Flash Sale Users 1-30,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,1
+1761469514455,16,Purchase,400,,Flash Sale Users 1-30,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,16,0,0
+1761469514797,76,Login,200,,Flash Sale Users 1-31,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,76,0,1
+1761469515073,14,Purchase,400,,Flash Sale Users 1-31,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469515398,76,Login,200,,Flash Sale Users 1-32,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,76,0,1
+1761469515676,13,Purchase,400,,Flash Sale Users 1-32,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469515988,82,Login,200,,Flash Sale Users 1-33,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,82,0,1
+1761469516271,12,Purchase,400,,Flash Sale Users 1-33,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,12,0,0
+1761469516586,74,Login,200,,Flash Sale Users 1-34,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,1
+1761469516865,11,Purchase,400,,Flash Sale Users 1-34,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,11,0,0
+1761469517182,99,Login,200,,Flash Sale Users 1-35,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,99,0,1
+1761469517481,14,Purchase,400,,Flash Sale Users 1-35,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469517798,82,Login,200,,Flash Sale Users 1-36,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,82,0,1
+1761469518081,31,Purchase,400,,Flash Sale Users 1-36,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,31,0,0
+1761469518401,73,Login,200,,Flash Sale Users 1-37,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,2
+1761469518680,15,Purchase,400,,Flash Sale Users 1-37,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,15,0,0
+1761469518984,75,Login,200,,Flash Sale Users 1-38,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,75,0,1
+1761469519261,16,Purchase,400,,Flash Sale Users 1-38,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,16,0,0
+1761469519592,80,Login,200,,Flash Sale Users 1-39,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,80,0,1
+1761469519882,13,Purchase,400,,Flash Sale Users 1-39,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469520177,77,Login,200,,Flash Sale Users 1-40,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,77,0,1
+1761469520455,14,Purchase,400,,Flash Sale Users 1-40,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469520797,77,Login,200,,Flash Sale Users 1-41,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,77,0,1
+1761469521075,11,Purchase,400,,Flash Sale Users 1-41,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,11,0,0
+1761469521385,78,Login,200,,Flash Sale Users 1-42,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,78,0,1
+1761469521677,13,Purchase,400,,Flash Sale Users 1-42,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,12,0,0
+1761469521983,74,Login,200,,Flash Sale Users 1-43,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,74,0,1
+1761469522257,13,Purchase,400,,Flash Sale Users 1-43,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469522595,78,Login,200,,Flash Sale Users 1-44,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,78,0,3
+1761469522887,15,Purchase,400,,Flash Sale Users 1-44,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,15,0,0
+1761469523183,72,Login,200,,Flash Sale Users 1-45,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,72,0,1
+1761469523456,13,Purchase,400,,Flash Sale Users 1-45,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469523788,74,Login,200,,Flash Sale Users 1-46,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,74,0,2
+1761469524064,12,Purchase,400,,Flash Sale Users 1-46,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,12,0,0
+1761469524390,72,Login,200,,Flash Sale Users 1-47,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,72,0,1
+1761469524667,11,Purchase,400,,Flash Sale Users 1-47,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,11,0,0
+1761469524981,73,Login,200,,Flash Sale Users 1-48,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,2
+1761469525255,15,Purchase,400,,Flash Sale Users 1-48,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,14,0,0
+1761469525585,73,Login,200,,Flash Sale Users 1-49,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,1
+1761469525863,13,Purchase,400,,Flash Sale Users 1-49,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,13,0,0
+1761469526184,73,Login,200,,Flash Sale Users 1-50,text,true,,767,262,1,1,http://localhost:8080/api/auth/login,73,0,1
+1761469526463,24,Purchase,400,,Flash Sale Users 1-50,text,false,Test failed: text expected to contain /orderId/,463,455,1,1,http://localhost:8080/api/flash-sale/purchase,24,0,0

@@ -4,6 +4,17 @@
       <h1>Welcome to Campus Market</h1>
       <p>Trade idle items, share campus resources, and keep transactions simple.</p>
       <el-button type="primary" size="large" @click="goGoods">Browse Listings</el-button>
+      <div class="flash-sale-entry">
+        <el-tag
+          type="danger"
+          effect="plain"
+          size="large"
+          class="flash-sale-tag"
+          @click="goFlashSale"
+        >
+          Flash Sale 秒杀专区
+        </el-tag>
+      </div>
     </section>
 
     <section class="hot-goods" v-if="featuredAll.length">
@@ -308,6 +319,7 @@ const resetKafkaForm = () => {
 
 const goGoods = () => router.push('/goods');
 const goGoodsDetail = (id: number) => router.push(`/goods/${id}`);
+const goFlashSale = () => router.push('/flash-sale');
 </script>
 
 <style scoped>
@@ -324,6 +336,20 @@ const goGoodsDetail = (id: number) => router.push(`/goods/${id}`);
   padding: 48px 32px;
   border-radius: 16px;
   text-align: center;
+}
+
+.hero p {
+  max-width: 480px;
+  margin: 0 auto 16px;
+}
+
+.flash-sale-entry {
+  margin-top: 16px;
+}
+
+.flash-sale-tag {
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .hero h1 {

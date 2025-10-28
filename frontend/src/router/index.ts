@@ -56,6 +56,12 @@ const routes: RouteRecordRaw[] = [
     name: 'profile',
     component: () => import('../views/ProfileView.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/flash-sale',
+    name: 'flash-sale',
+    component: () => import('../views/FlashSaleView.vue'),
+    meta: { requiresAuth: false }
   }
 ];
 

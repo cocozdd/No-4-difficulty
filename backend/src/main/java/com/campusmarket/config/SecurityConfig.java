@@ -4,6 +4,7 @@ import com.campusmarket.security.jwt.JwtAuthenticationEntryPoint;
 import com.campusmarket.security.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -38,6 +39,7 @@ public class SecurityConfig {
                 .and()
                 .authorizeRequests()
                 .antMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                .antMatchers(HttpMethod.GET, "/api/flash-sale/items").permitAll()
                 .antMatchers("/actuator/prometheus").permitAll()
                 .antMatchers("/ws/**").permitAll()
                 .antMatchers("/api/admin/**").hasRole("ADMIN")

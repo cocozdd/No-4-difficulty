@@ -103,3 +103,50 @@ auth:user-sessions:{userId} -> Set，存放该用户所有 Token，便于批量�
 - [ ] 直接手动删除 Redis 会话，再请求接口是否被拦截？  
 - [ ] Redis 宕机或模拟异常时，日志是否出现 WARN 并提示重新登录？  
 - [ ] 结合 Postman/Rest Client 与 redis-cli 对每个步骤进行演练，确保答题时心中有实操路径。
+
+## 10. MySQL + Redis 协同实战总结
+
+| 场景 | 主要实践 | 核心要点 | 代码示例 |
+|------|----------|----------|----------|
+| **写多读多的数据** | 先写 MySQL，再删除相关 Redis 缓存 | 保证数据库为准；使用“先 DB 后删缓存”避免脏读 | `GoodsServiceImpl.evictCachesForGoods` 触发 `GoodsCacheServiceImpl` 清理 `goods:detail:*`、`goods:list:*` |
+| **实时统计/排行榜** | Redis 作为主存储，MySQL 不同步；使用原子操作覆盖高并发 | `HINCRBY`、`ZINCRBY`、`INCR` 等天然支持多线程；异常时降级 | `GoodsMetricsServiceImpl`、`HotGoodsServiceImpl` 维护浏览/加购/订单、ZSet 排行 |
+| **登录会话/黑名单** | Redis 保存 Token 状态，MySQL 仍存用户信息 | Redis 只掌控“是否有效”，失效立即生效，MySQL 无需跟进 | `LoginSessionServiceImpl` 维护 `auth:session:{token}` |
+| **限流/防刷** | Redis `INCR` + `EXPIRE` 或 Lua 实现窗口计数 | 原子操作、TTL 自动过期，多线程安全 | `OrderServiceImpl.enforceOrderRateLimit` (`rate:order:{userId}`) |
+| **分布式锁/一致性** | 若需要强一致更新，可选用 Redisson/SETNX | 本项目的计数类操作不需要锁；缓存失效+原子增保证一致性 | 可在热点库存扣减、互斥任务时扩展 |
+| **错误处理策略** | Redis 读写失败时捕获异常，业务流程继续（必要时提示重试） | 避免 Redis 故障放大为服务不可用；日志记录失效 | 所有 Service 的 `try/catch`（如 `GoodsMetricsServiceImpl`, `LoginSessionServiceImpl`） |
+| **多线程/多实例同步** | 统一通过 Redis 做状态共享；MySQL 事务保证持久化 | 读多写少场景通过缓存；写入后删缓存；统计、会话类数据靠 Redis | Spring Bean 单例，依赖注入的 Redis 客户端线程安全 |
+
+- **高并发读写**：统计类使用 Redis 原子命令；缓存类在事务提交后统一失效，避免多个线程同时写缓存导致旧数据覆盖。  
+- **一致性策略**：读一致性由“DB 写入→清缓存→下次读回填”实现；Redis 作为最终一致的附加信息（热点榜、会话、限流）。  
+- **容灾与监控**：日志 WARN 提醒 Redis 失败；可结合 Sentinel/Cluster 保证高可用。MySQL 仍是权威来源，Redis 缺失时系统降级为“需要重新登录/失去缓存加速”。  
+- **面试表达**：先描述数据库事务是基础，再解释 Redis 在不同子系统的角色，并列出失败兜底方案、常见并发模式（缓存失效、原子自增、限流、分布式锁）。
+- **缓存穿透防护**：商品服务在缓存未命中且数据库查不到时，会写入短 TTL 的空值（GoodsServiceImpl.cacheGoodsNotFound），避免恶意请求持续穿透数据库。
+- **缓存击穿防护**：对热点 Key 设置随机 TTL 避免集体过期；对于详情 Key 命中率高的场景，若缓存失效则立即回源并重建缓存，关键操作可扩展加 Redis 分布式锁（当前业务通过写库后删除缓存以及短 TTL 热点缓存，击穿窗口较小）。
+- **缓存穿透防护**：商品服务在缓存未命中且数据库查不到时，会写入短 TTL 的空值（GoodsServiceImpl.cacheGoodsNotFound），避免因恶意或偶发的不存在 ID 不断穿透数据库。
+- **缓存穿透防护**：商品服务在缓存未命中且数据库查不到时，会写入短 TTL 的空值（GoodsServiceImpl.cacheGoodsNotFound），避免因恶意或偶发的不存在 ID 不断穿透数据库。
+- **缓存穿透防护**：商品服务在缓存未命中且数据库查不到时，会写入短 TTL 的空值（GoodsServiceImpl.cacheGoodsNotFound），避免因恶意或偶发的不存在 ID 不断穿透数据库。***
+
+## 11. 设计初衷与架构考量
+
+> 这部分整理项目在规划阶段就确定的准则，可作为面试时的“设计理念”回答。
+
+- **持久层优先**  
+  - MySQL 是唯一真相来源，所有写操作先落库，再触发 Redis 失效或补写。  
+  - 事务提交成功后才操作缓存，避免多线程/多实例场景下出现旧数据覆盖。  
+  - 若缓存刷新失败，只影响性能，不影响正确性。
+
+- **Redis 聚焦高并发与实时性**  
+  - 登录会话、未读消息、热门榜单、限流等都使用 Redis 原子命令来保证并发安全。  
+  - Key 设计统一规范，TTL 明确，可支撑热点数据秒级更新。  
+  - 所有 Redis 调用均包裹异常捕获，故障时自动降级为“重新登录/走数据库”。
+
+- **面向分布式部署**  
+  - JWT + Redis 会话中心、WebSocket 握手拦截器、Kafka 异步事件链路，确保多实例部署时状态共享、一致。  
+  - `auth:user-sessions:*` 结构预留了单点登录、后台踢人、并发登录限制等扩展能力。
+
+- **可观测与易排障**  
+  - 日志记录关键操作与失败原因，方便快速定位问题。  
+  - 文档提供 redis-cli 命令、自测清单，便于团队成员验证和回归。  
+  - 所有 Key 前缀统一，便于监控、统计、清理。
+
+掌握这些设计原则，有助于在面试中说明“我们不是写完后才想起 Redis，而是在架构阶段就围绕持久层可靠性、缓存一致性和分布式扩展做的规划”。***
