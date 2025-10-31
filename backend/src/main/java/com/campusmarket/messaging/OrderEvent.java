@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public class OrderEvent {
 
+    private String eventId;
     private OrderEventType eventType;
     private Long orderId;
     private Long goodsId;
@@ -16,6 +17,24 @@ public class OrderEvent {
     public OrderEvent() {
     }
 
+    public OrderEvent(String eventId,
+                      OrderEventType eventType,
+                      Long orderId,
+                      Long goodsId,
+                      Long buyerId,
+                      String currentStatus,
+                      String previousStatus,
+                      LocalDateTime eventTime) {
+        this.eventId = eventId;
+        this.eventType = eventType;
+        this.orderId = orderId;
+        this.goodsId = goodsId;
+        this.buyerId = buyerId;
+        this.currentStatus = currentStatus;
+        this.previousStatus = previousStatus;
+        this.eventTime = eventTime;
+    }
+
     public OrderEvent(OrderEventType eventType,
                       Long orderId,
                       Long goodsId,
@@ -23,13 +42,15 @@ public class OrderEvent {
                       String currentStatus,
                       String previousStatus,
                       LocalDateTime eventTime) {
-        this.eventType = eventType;
-        this.orderId = orderId;
-            this.goodsId = goodsId;
-        this.buyerId = buyerId;
-        this.currentStatus = currentStatus;
-        this.previousStatus = previousStatus;
-        this.eventTime = eventTime;
+        this(null, eventType, orderId, goodsId, buyerId, currentStatus, previousStatus, eventTime);
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
     }
 
     public OrderEventType getEventType() {

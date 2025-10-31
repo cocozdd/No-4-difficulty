@@ -1,0 +1,18 @@
+warning_message
+[WARN] skip drop IDX_orders_buyer_created on orders (maybe referenced by FK)
+warning_message
+[WARN] skip drop IDX_orders_goods_id on orders (maybe referenced by FK)
+warning_message
+[WARN] skip drop IDX_chat_message_pair_created on chat_message (maybe referenced by FK)
+info
+--- BASELINE (NO INDEX) ---
+query	executed_at
+orders_by_buyer_before	2025-10-28 23:40:01
+EXPLAIN
+-> Limit: 20 row(s)  (cost=0.35 rows=1) (actual time=0.012..0.012 rows=0 loops=1)\n    -> Index lookup on orders using IDX_orders_buyer_created (buyer_id=1001) (reverse)  (cost=0.35 rows=1) (actual time=0.011..0.011 rows=0 loops=1)\n
+query	executed_at
+chat_messages_before	2025-10-28 23:40:02
+EXPLAIN
+-> Limit: 20 row(s)  (cost=0.30 rows=1) (actual time=0.021..0.021 rows=0 loops=1)\n    -> Sort: chat_message.created_at DESC, limit input to 20 row(s) per chunk  (cost=0.30 rows=1) (actual time=0.020..0.020 rows=0 loops=1)\n        -> Filter: (chat_message.sender_id = 1001)  (actual time=0.015..0.015 rows=0 loops=1)\n            -> Index lookup on chat_message using fk_chat_message_receiver (receiver_id=2002)  (actual time=0.015..0.015 rows=0 loops=1)\n
+info
+--- APPLY INDEXES ---

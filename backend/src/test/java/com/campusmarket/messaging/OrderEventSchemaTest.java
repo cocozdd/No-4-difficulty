@@ -11,6 +11,7 @@ class OrderEventSchemaTest {
     @Test
     void orderEventMatchesSchema() throws IOException {
         OrderEvent event = new OrderEvent();
+        event.setEventId("TESTID1");
         event.setEventType(OrderEventType.ORDER_CREATED);
         event.setOrderId(1L);
         event.setGoodsId(2L);

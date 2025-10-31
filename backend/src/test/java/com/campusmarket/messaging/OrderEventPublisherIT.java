@@ -62,6 +62,7 @@ class OrderEventPublisherIT extends KafkaIntegrationTestBase {
         assertThat(event.getOrderId()).isEqualTo(order.getId());
         assertThat(event.getGoodsId()).isEqualTo(order.getGoodsId());
         assertThat(event.getBuyerId()).isEqualTo(order.getBuyerId());
+        assertThat(event.getEventId()).isNotBlank();
     }
 
     private ConsumerRecords<String, OrderEvent> pollForRecords() {

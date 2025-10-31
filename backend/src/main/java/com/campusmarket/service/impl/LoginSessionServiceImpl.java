@@ -1,6 +1,7 @@
 package com.campusmarket.service.impl;
 
 import com.campusmarket.service.LoginSessionService;
+import com.campusmarket.service.SessionAccessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -118,10 +119,11 @@ public class LoginSessionServiceImpl implements LoginSessionService {
         } catch (JsonProcessingException ex) {
             log.warn("Failed to deserialize login session token={}, payload corrupted", token);
             redisTemplate.delete(sessionKey(token));
+            return Optional.empty();
         } catch (RuntimeException ex) {
             log.warn("Redis unavailable when fetching session token={}", token, ex);
+            throw new SessionAccessException("Session store unavailable", ex);
         }
-        return Optional.empty();
     }
 
     @Override
@@ -130,7 +132,12 @@ public class LoginSessionServiceImpl implements LoginSessionService {
             return;
         }
         try {
-            Optional<LoginSession> sessionOptional = getSession(token);
+            Optional<LoginSession> sessionOptional;
+            try {
+                sessionOptional = getSession(token);
+            } catch (SessionAccessException ex) {
+                return;
+            }
             if (sessionOptional.isEmpty()) {
                 return;
             }

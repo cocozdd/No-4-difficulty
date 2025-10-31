@@ -27,11 +27,14 @@ public class KafkaDiagnosticsService {
 
     private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
     private final String orderTopic;
+    private final DistributedIdGenerator idGenerator;
 
     public KafkaDiagnosticsService(KafkaTemplate<String, OrderEvent> kafkaTemplate,
-                                   @Value("${app.kafka.order-topic:order-events}") String orderTopic) {
+                                   @Value("${app.kafka.order-topic:order-events}") String orderTopic,
+                                   DistributedIdGenerator idGenerator) {
         this.kafkaTemplate = kafkaTemplate;
         this.orderTopic = orderTopic;
+        this.idGenerator = idGenerator;
     }
 
     public KafkaTestResponse publishOrderEvent(KafkaTestRequest request) {
@@ -47,6 +50,7 @@ public class KafkaDiagnosticsService {
                 request.getPreviousStatus(),
                 dispatchedAt
         );
+        event.setEventId(idGenerator.nextIdAsString("order-event"));
         event.setNote(Optional.ofNullable(request.getMessage())
                 .filter(msg -> !msg.isBlank())
                 .orElse("Kafka diagnostics event dispatched"));

@@ -2,6 +2,7 @@ package com.campusmarket.messaging;
 
 import com.campusmarket.entity.Order;
 import com.campusmarket.entity.OrderStatus;
+import com.campusmarket.service.DistributedIdGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,11 +18,14 @@ public class OrderEventPublisher {
 
     private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
     private final String orderTopic;
+    private final DistributedIdGenerator idGenerator;
 
     public OrderEventPublisher(KafkaTemplate<String, OrderEvent> kafkaTemplate,
-                               @Value("${app.kafka.order-topic:order-events}") String orderTopic) {
+                               @Value("${app.kafka.order-topic:order-events}") String orderTopic,
+                               DistributedIdGenerator idGenerator) {
         this.kafkaTemplate = kafkaTemplate;
         this.orderTopic = orderTopic;
+        this.idGenerator = idGenerator;
     }
 
     public void publishOrderCreated(Order order) {
@@ -29,6 +33,7 @@ public class OrderEventPublisher {
             return;
         }
         OrderEvent event = new OrderEvent(
+                idGenerator.nextIdAsString("order-event"),
                 OrderEventType.ORDER_CREATED,
                 order.getId(),
                 order.getGoodsId(),
@@ -45,6 +50,7 @@ public class OrderEventPublisher {
             return;
         }
         OrderEvent event = new OrderEvent(
+                idGenerator.nextIdAsString("order-event"),
                 OrderEventType.ORDER_STATUS_CHANGED,
                 order.getId(),
                 order.getGoodsId(),

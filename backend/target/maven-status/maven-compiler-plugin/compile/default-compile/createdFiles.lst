@@ -17,13 +17,16 @@ com\campusmarket\messaging\OrderEventType.class
 com\campusmarket\dto\KafkaTestResponse.class
 com\campusmarket\service\impl\FlashSaleServiceImpl.class
 com\campusmarket\config\KafkaListenerConfig.class
+com\campusmarket\service\DistributedIdGenerator.class
 com\campusmarket\messaging\GoodsEventType.class
 com\campusmarket\service\ChatMetricsService.class
+com\campusmarket\service\impl\RedisDistributedIdGenerator.class
 com\campusmarket\service\LoginSessionService$LoginSession.class
 com\campusmarket\messaging\ChatEvent.class
 com\campusmarket\messaging\OrderEvent.class
 com\campusmarket\entity\FlashSaleOrder.class
 com\campusmarket\config\KafkaTopicConfig.class
+com\campusmarket\service\SessionAccessException.class
 com\campusmarket\mapper\FlashSaleItemMapper.class
 com\campusmarket\service\ChatCacheService.class
 com\campusmarket\service\impl\ChatCacheServiceImpl.class

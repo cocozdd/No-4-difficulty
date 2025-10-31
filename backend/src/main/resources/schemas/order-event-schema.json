@@ -3,6 +3,7 @@
   "title": "OrderEvent",
   "type": "object",
   "required": [
+    "eventId",
     "eventType",
     "orderId",
     "goodsId",
@@ -10,6 +11,10 @@
     "eventTime"
   ],
   "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{6,64}$"
+    },
     "eventType": {
       "type": "string",
       "enum": [

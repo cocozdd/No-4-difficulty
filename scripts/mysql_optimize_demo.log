@@ -1,0 +1,64 @@
+warning_message
+[WARN] skip drop IDX_orders_buyer_created on orders (maybe referenced by FK)
+warning_message
+[WARN] skip drop IDX_orders_goods_id on orders (maybe referenced by FK)
+warning_message
+[WARN] skip drop IDX_chat_message_pair_created on chat_message (maybe referenced by FK)
+info
+--- BASELINE (NO INDEX) ---
+query	executed_at
+orders_by_buyer_before	2025-10-28 23:48:14
+EXPLAIN
+-> Limit: 20 row(s)  (cost=1.10 rows=1) (actual time=0.008..0.008 rows=0 loops=1)\n    -> Index lookup on orders using IDX_orders_buyer_created (buyer_id=1001) (reverse)  (cost=1.10 rows=1) (actual time=0.007..0.007 rows=0 loops=1)\n
+query	executed_at
+chat_messages_before	2025-10-28 23:48:14
+EXPLAIN
+-> Limit: 20 row(s)  (cost=1.05 rows=1) (actual time=0.198..0.198 rows=0 loops=1)\n    -> Sort: chat_message.created_at DESC, limit input to 20 row(s) per chunk  (cost=1.05 rows=1) (actual time=0.197..0.197 rows=0 loops=1)\n        -> Filter: (chat_message.sender_id = 1001)  (actual time=0.011..0.011 rows=0 loops=1)\n            -> Index lookup on chat_message using fk_chat_message_receiver (receiver_id=2002)  (actual time=0.010..0.010 rows=0 loops=1)\n
+info
+--- APPLY INDEXES ---
+info
+Applying optional indexes…
+note
+INDEX IDX_orders_buyer_created already exists
+note
+INDEX IDX_orders_goods_id already exists
+note
+INDEX IDX_chat_message_pair_created already exists
+info
+done
+info
+--- AFTER INDEX ---
+query	executed_at
+orders_by_buyer_after	2025-10-28 23:48:15
+EXPLAIN
+-> Limit: 20 row(s)  (cost=1.10 rows=1) (actual time=0.006..0.006 rows=0 loops=1)\n    -> Index lookup on orders using IDX_orders_buyer_created (buyer_id=1001) (reverse)  (cost=1.10 rows=1) (actual time=0.006..0.006 rows=0 loops=1)\n
+query	executed_at
+chat_messages_after	2025-10-28 23:48:15
+EXPLAIN
+-> Limit: 20 row(s)  (cost=1.05 rows=1) (actual time=0.010..0.010 rows=0 loops=1)\n    -> Sort: chat_message.created_at DESC, limit input to 20 row(s) per chunk  (cost=1.05 rows=1) (actual time=0.010..0.010 rows=0 loops=1)\n        -> Filter: (chat_message.sender_id = 1001)  (actual time=0.006..0.006 rows=0 loops=1)\n            -> Index lookup on chat_message using fk_chat_message_receiver (receiver_id=2002)  (actual time=0.005..0.005 rows=0 loops=1)\n
+info
+--- CURRENT INDEXES ---
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+orders	0	PRIMARY	1	id	A	2	NULL	NULL		BTREE			YES	NULL
+orders	1	IDX_orders_buyer_created	1	buyer_id	A	1	NULL	NULL		BTREE			YES	NULL
+orders	1	IDX_orders_buyer_created	2	created_at	A	2	NULL	NULL		BTREE			YES	NULL
+orders	1	IDX_orders_goods_id	1	goods_id	A	2	NULL	NULL		BTREE			YES	NULL
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+chat_message	0	PRIMARY	1	id	A	18	NULL	NULL		BTREE			YES	NULL
+chat_message	1	fk_chat_message_receiver	1	receiver_id	A	3	NULL	NULL		BTREE			YES	NULL
+chat_message	1	IDX_chat_message_pair_created	1	sender_id	A	2	NULL	NULL		BTREE			YES	NULL
+chat_message	1	IDX_chat_message_pair_created	2	receiver_id	A	3	NULL	NULL		BTREE			YES	NULL
+chat_message	1	IDX_chat_message_pair_created	3	created_at	A	18	NULL	NULL		BTREE			YES	NULL
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+goods	0	PRIMARY	1	id	A	9	NULL	NULL		BTREE			YES	NULL
+goods	1	fk_goods_seller	1	seller_id	A	3	NULL	NULL		BTREE			YES	NULL
+goods	1	IDX_goods_status_category_published	1	status	A	1	NULL	NULL		BTREE			YES	NULL
+goods	1	IDX_goods_status_category_published	2	category	A	3	NULL	NULL	YES	BTREE			YES	NULL
+goods	1	IDX_goods_status_category_published	3	published_at	A	9	NULL	NULL		BTREE			YES	NULL
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+flash_sale_order	0	PRIMARY	1	id	A	0	NULL	NULL		BTREE			YES	NULL
+flash_sale_order	0	uk_flash_sale_user	1	flash_sale_item_id	A	0	NULL	NULL		BTREE			YES	NULL
+flash_sale_order	0	uk_flash_sale_user	2	user_id	A	0	NULL	NULL		BTREE			YES	NULL
+flash_sale_order	1	fk_flash_sale_user	1	user_id	A	0	NULL	NULL		BTREE			YES	NULL
+flash_sale_order	1	IDX_flash_sale_item_created	1	flash_sale_item_id	A	0	NULL	NULL		BTREE			YES	NULL
+flash_sale_order	1	IDX_flash_sale_item_created	2	created_at	A	0	NULL	NULL		BTREE			YES	NULL

@@ -3,6 +3,7 @@ package com.campusmarket.security.jwt;
 import com.campusmarket.entity.User;
 import com.campusmarket.service.LoginSessionService;
 import com.campusmarket.service.UserService;
+import com.campusmarket.service.SessionAccessException;
 import com.campusmarket.service.LoginSessionService.LoginSession;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -40,21 +41,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String jwt = resolveToken(request);
         if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-            LoginSession session = loginSessionService.getSession(jwt).orElse(null);
-            if (session != null) {
-                Long userId = session.getUserId();
-                User user = userService.findById(userId);
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        user,
-                        null,
-                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
-                );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                loginSessionService.refreshSession(jwt);
+            try {
+                LoginSession session = loginSessionService.getSession(jwt).orElse(null);
+                if (session != null) {
+                    authenticateWithUser(request, session.getUserId());
+                    loginSessionService.refreshSession(jwt);
+                } else {
+                    authenticateWithJwtClaims(request, jwt);
+                }
+            } catch (SessionAccessException ex) {
+                authenticateWithJwtClaims(request, jwt);
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private void authenticateWithJwtClaims(HttpServletRequest request, String jwt) {
+        Long userId = tokenProvider.getUserId(jwt);
+        User user = userService.findById(userId);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                user,
+                null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+        );
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    private void authenticateWithUser(HttpServletRequest request, Long userId) {
+        User user = userService.findById(userId);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                user,
+                null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+        );
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     private String resolveToken(HttpServletRequest request) {
