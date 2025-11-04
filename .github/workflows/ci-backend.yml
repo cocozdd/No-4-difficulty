@@ -25,8 +25,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - name: Run backend tests
-        run: ./backend/mvnw -B verify
-
+        working-directory: backend
+        run: ./mvnw -B verify
   build-and-push:
     runs-on: ubuntu-22.04
     needs: test
