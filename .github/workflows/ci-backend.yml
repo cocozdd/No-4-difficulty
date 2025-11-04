@@ -54,7 +54,7 @@ jobs:
   deploy:
     runs-on: ubuntu-22.04
     needs: build-and-push
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
