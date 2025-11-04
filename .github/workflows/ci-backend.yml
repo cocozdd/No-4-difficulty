@@ -48,8 +48,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ${{ env.ACR_SERVER }}/campus-market-backend:${{ github.sha }}
-            ${{ env.ACR_SERVER }}/campus-market-backend:latest
+            ${{ env.ACR_SERVER }}/campus-market/campus-market-backend:${{ github.sha }}
+            ${{ env.ACR_SERVER }}/campus-market/campus-market-backend:latest
 
   deploy:
     runs-on: ubuntu-22.04
