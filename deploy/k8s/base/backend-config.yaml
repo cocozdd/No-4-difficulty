@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: campus-market
+data:
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_market?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+  SPRING_REDIS_HOST: redis
+  SPRING_REDIS_PORT: "6379"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  MINIO_ENDPOINT: http://minio:9000
+  MINIO_BUCKET_GOODS: campus-market-goods
+  MINIO_BUCKET_CHAT: campus-market-chat
+

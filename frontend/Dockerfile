@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.4
-
 ##
 # Build stage: compile static assets with Vite
 ##
