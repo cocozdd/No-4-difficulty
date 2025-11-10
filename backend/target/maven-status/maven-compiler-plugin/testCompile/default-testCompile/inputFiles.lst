@@ -1,5 +1,6 @@
 F:\No-4-difficulty\backend\src\test\java\com\campusmarket\messaging\ChatEventSchemaTest.java
 F:\No-4-difficulty\backend\src\test\java\com\campusmarket\messaging\OrderEventSchemaTest.java
+F:\No-4-difficulty\backend\src\test\java\com\campusmarket\service\impl\UserServiceImplTest.java
 F:\No-4-difficulty\backend\src\test\java\com\campusmarket\messaging\schema\SchemaValidationUtil.java
 F:\No-4-difficulty\backend\src\test\java\com\campusmarket\messaging\OrderEventPublisherIT.java
 F:\No-4-difficulty\backend\src\test\java\com\campusmarket\messaging\GoodsEventPublisherIT.java
