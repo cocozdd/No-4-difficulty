@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-@TableName("user")
+@TableName("users")
 public class User implements Serializable {
     private static final long serialVersionUID = 1L;
 

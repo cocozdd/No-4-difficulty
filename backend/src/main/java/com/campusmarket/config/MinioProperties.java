@@ -6,6 +6,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class MinioProperties {
 
     private String endpoint;
+    /**
+     * Optional public endpoint exposed to browsers; falls back to {@link #endpoint} when empty.
+     */
+    private String publicEndpoint;
     private boolean secure = false;
     private String accessKey;
     private String secretKey;
@@ -17,6 +21,14 @@ public class MinioProperties {
 
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
+    }
+
+    public String getPublicEndpoint() {
+        return publicEndpoint;
+    }
+
+    public void setPublicEndpoint(String publicEndpoint) {
+        this.publicEndpoint = publicEndpoint;
     }
 
     public boolean isSecure() {

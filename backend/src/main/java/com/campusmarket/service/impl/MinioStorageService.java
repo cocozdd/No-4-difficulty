@@ -166,11 +166,18 @@ public class MinioStorageService implements StorageService {
     }
 
     private String buildObjectUrl(String bucket, String objectName) {
-        String endpoint = properties.getEndpoint();
-        if (properties.isSecure() && !endpoint.startsWith("https://")) {
-            endpoint = "https://" + endpoint.replaceFirst("^https?://", "");
-        } else if (!properties.isSecure() && !endpoint.startsWith("http://") && !endpoint.startsWith("https://")) {
-            endpoint = "http://" + endpoint;
+        String endpoint = StringUtils.hasText(properties.getPublicEndpoint())
+                ? properties.getPublicEndpoint()
+                : properties.getEndpoint();
+        if (!StringUtils.hasText(endpoint)) {
+            throw new IllegalStateException("MinIO endpoint is not configured");
+        }
+        boolean hasScheme = endpoint.startsWith("http://") || endpoint.startsWith("https://");
+        if (!hasScheme) {
+            String scheme = properties.isSecure() ? "https://" : "http://";
+            endpoint = scheme + endpoint;
+        } else if (properties.isSecure() && endpoint.startsWith("http://")) {
+            endpoint = endpoint.replaceFirst("^http://", "https://");
         }
         return String.format("%s/%s/%s", endpoint.replaceAll("/$", ""), bucket, encodePath(objectName));
     }

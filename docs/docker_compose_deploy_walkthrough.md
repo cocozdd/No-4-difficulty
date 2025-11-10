@@ -44,16 +44,15 @@
   git clone https://github.com/cocozdd/No-4-difficulty.git campus-market
   cd campus-market
   ```
-- **编写 `.env` 与 `docker-compose.override.yml`（示例凭据，正式环境需替换）**
+- **准备 `.env`（示例凭据，正式环境需替换）**
   ```bash
   cat <<'EOF' > .env
-  SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/campus_market?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8
-  SPRING_DATASOURCE_USERNAME=campus_app
-  SPRING_DATASOURCE_PASSWORD=Yf4m@9!cS7Lh21QP
+  POSTGRES_DB=campus_market
+  POSTGRES_USER=campus_app
+  POSTGRES_PASSWORD=Yf4m@9!cS7Lh21QP
 
-  MYSQL_ROOT_PASSWORD=Rx79t#qVbL41c/?F
-  MYSQL_USER=campus_app
-  MYSQL_PASSWORD=Yf4m@9!cS7Lh21QP
+  SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+  SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
 
   JWT_SECRET=pS1mVn9#Dw3!kR5@tHg6zQ1cL7eB8yFp
 
@@ -62,29 +61,14 @@
   MINIO_BUCKET_GOODS=campus-market-goods
   MINIO_BUCKET_CHAT=campus-market-chat
   EOF
-
-  cat <<'EOF' > docker-compose.override.yml
-  services:
-    backend:
-      environment:
-        SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-        SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-        SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-        JWT_SECRET: ${JWT_SECRET}
-        MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-        MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-        MINIO_BUCKET_GOODS: ${MINIO_BUCKET_GOODS}
-        MINIO_BUCKET_CHAT: ${MINIO_BUCKET_CHAT}
-    mysql:
-      environment:
-        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-        MYSQL_DATABASE: campus_market
-        MYSQL_USER: ${MYSQL_USER}
-        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-  EOF
   chmod 600 .env
   ```
-- **低内存机思路**：可换用云数据库，或保留内置 MySQL 并调小 `innodb_buffer_pool_size`、启用 Swap。
+- **可选：接入外部 MinIO**
+  - 如果已在宿主机或云端部署 MinIO，可结合仓库中的 `docker-compose.override.local-minio.yml` 覆盖文件：
+    ```bash
+    docker compose -f docker-compose.yml -f docker-compose.override.local-minio.yml up -d
+    ```
+    覆盖文件会禁用内置 MinIO 服务，并把后端的 `MINIO_ENDPOINT` 指向 `host.docker.internal:9000`（如需其他地址，修改文件或在命令行传入环境变量即可）。
 
 ## 3. 镜像构建
 - 赋权 Maven Wrapper：`chmod +x backend/mvnw`
@@ -98,7 +82,7 @@
   docker tag registry.cn-hangzhou.aliyuncs.com/bitnami/kafka:3.7 bitnami/kafka:3.7
   docker rmi registry.cn-hangzhou.aliyuncs.com/bitnami/kafka:3.7
   ```
-- Prometheus、Grafana、MinIO、MySQL、Redis 同理，之后使用 `docker compose up -d --pull never` 启动。
+- Prometheus、Grafana、MinIO、PostgreSQL、Redis 同理，之后使用 `docker compose up -d --pull never` 启动。
 - 面试时可强调：镜像镜像源 fallback、版本锁定、Kafka 3.7 与 Spring Boot 2.7 的兼容性。
 
 ## 5. 启动与数据库导入
@@ -107,12 +91,13 @@
   docker compose up -d --pull never
   docker compose ps
   ```
-- 导入 schema 和样例数据：
+- 导入 schema 和样例数据（仓库默认的 `scripts/db-init/postgres-init.sql` 只建表，如需演示数据可自行补充 insert 脚本）：
   ```bash
-  docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" campus_market' < backup/campus_market_full.sql
-  docker compose exec mysql sh -c 'mysql -ucampus_app -p"$MYSQL_PASSWORD" -e "SHOW TABLES;" campus_market'
+  docker compose exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt"
+  # 需要额外导入演示数据时：
+  # docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backup/campus_market_demo.sql
   ```
-- 若后端抢在 MySQL 前启动，可执行 `docker compose restart backend`。
+- 若后端抢在 PostgreSQL 前启动，可执行 `docker compose restart backend`。
 
 ## 6. 验证清单
 - 后端日志：`docker compose logs backend --tail 50`
@@ -123,11 +108,11 @@
 - Prometheus：`http://<ECS_IP>:9091`
 - CLI 演示：
   ```bash
-  docker compose exec backend sh -c "apk add --no-cache mysql-client && mysql -hmysql -ucampus_app -p${SPRING_DATASOURCE_PASSWORD} -e 'SELECT 1'"
+  docker compose exec backend sh -c "apk add --no-cache postgresql-client && psql -hpostgres -U ${SPRING_DATASOURCE_USERNAME} -d ${POSTGRES_DB} -c 'SELECT 1'"
   ```
 
 ## 7. 运营维护
-- 定期备份数据卷（MySQL、MinIO、Grafana 等）。
+- 定期备份数据卷（PostgreSQL、MinIO、Grafana 等）。
 - 配置 systemd 自启动：
   ```ini
   [Unit]
@@ -182,3 +167,18 @@
 4. **流程意义**：提交代码即可自动完成测试、构建、部署，无需手动登录服务器或镜像仓库，大幅缩短迭代周期，也为团队协作和持续交付打下基础。
 
 通过以上步骤和总结，我可以向面试官清楚地说明我的 DevOps 实践能力：不仅能手工部署，还能把流程标准化、自动化，真正实现“写代码、推送、上线”的一体化闭环。
+
+## 11. 最近问题与改进记录
+
+| 时间 | 现象 | 根因 | 解决方案 | 后续改进 |
+| --- | --- | --- | --- | --- |
+| 2025-11：本地 IDEA 启动后端报 `No resolvable bootstrap urls` | `spring.kafka.bootstrap-servers` 默认仍是容器网络地址 `kafka:9092` | 本地环境解析不到 `kafka` 主机名 | 将 `backend/src/main/resources/application.yml` 默认改为 `localhost:9092`，容器继续用 `SPRING_KAFKA_BOOTSTRAP_SERVERS` 覆盖 | 规范：配置文件默认指向 localhost，部署环境一律靠环境变量/override 注入 |
+| 2025-11：打包后的前端 WebSocket 连到 `ws://localhost:5173/ws` 失败 | `resolveEndpoint()` 只对 dev 端口做特殊处理，静态站点托管在 5173 时没有 WS | 生产部署缺少固定 WS 地址 | 新增 `VITE_WS_ENDPOINT`，在 `.env.production` 写 `ws://<backend>/ws`，或把前后端托管到同一域名 | 上线 checklist 加入「确认 VITE_WS_ENDPOINT/反向代理配置」 |
+| 2025-11：图片上传成功但浏览器显示 `FAILED` | MinIO bucket 默认私有且生成 URL 为 `http://minio:9000/...` | 前端访问不到容器内网 Host，且没有公开读取策略 | `MinioProperties` 加 `publicEndpoint`、`MINIO_PUBLIC_ENDPOINT`；`MinioConfig` 自动下发只读策略 | 部署 checklist 增加「MINIO_PUBLIC_ENDPOINT 可访问」「bucket policy 允许匿名读取」 |
+| 2025-11：Element Plus 控制台警告 `type.text is about to be deprecated` | 仍大量使用 `el-button type="text"` | Element Plus 3 将移除此类型 | 将按钮改为 `link`（`frontend/src/views/MyGoodsView.vue`、`frontend/src/views/CartView.vue` 等） | 前端 lint 规则里加入 Element Plus 的 breaking change 检查 |
+
+**流程层面的改进建议**
+1. **环境隔离**：保持 `application.yml`/`.env` 指向本地依赖，服务器/容器差异通过环境变量与 override 文件注入，避免 IDE 和 Docker 配置漂移。
+2. **统一发布入口**：将 `docker compose build && docker compose up -d`（或 K8s apply）固化为脚本，服务器升级时执行同一步骤，便于排错和回滚。
+3. **发布前检查表**：新增 Kafka、MinIO、WebSocket 连通性检查项，确保 `bootstrap.servers`、`MINIO_PUBLIC_ENDPOINT`、`VITE_WS_ENDPOINT` 等关键变量都指向可访问地址。
+4. **旧版本并存策略**：服务器上若保留旧部署，先比对 `.env` / compose 覆盖文件再发布，必要时安排维护窗口做滚动重启，并记录镜像版本与回滚方式。

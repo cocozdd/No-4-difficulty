@@ -53,7 +53,7 @@
                       :disabled="item.goodsSold || item.goodsStatus !== 'APPROVED'"
                       @change="handleQuantityChange(item)"
                     />
-                    <el-button type="text" @click="remove(item.id)">Remove</el-button>
+                    <el-button link @click="remove(item.id)">Remove</el-button>
                   </div>
                 </div>
               </div>

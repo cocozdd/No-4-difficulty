@@ -78,7 +78,7 @@
       <el-col :xs="24" :md="14">
         <div class="list-header">
           <h2>My Listings</h2>
-          <el-button type="text" @click="refreshList">Refresh</el-button>
+          <el-button link @click="refreshList">Refresh</el-button>
         </div>
         <el-empty
           v-if="!goodsStore.myGoods.length"
@@ -113,7 +113,7 @@
                       : 'Rejected by admin. Edit and resubmit.'
                   }}
                 </p>
-                <el-button type="text" @click="goDetail(item.id)">View detail</el-button>
+                <el-button link @click="goDetail(item.id)">View detail</el-button>
               </div>
             </el-card>
           </el-col>
