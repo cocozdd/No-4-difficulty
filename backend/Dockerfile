@@ -6,10 +6,11 @@ WORKDIR /workspace
 
 COPY mvnw pom.xml ./
 COPY .mvn .mvn
-RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && ./mvnw -q -B dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 \
+    sed -i 's/\r$//' mvnw && chmod +x mvnw && ./mvnw -q -B dependency:go-offline
 
 COPY src src
-RUN ./mvnw -q -B clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -q -B clean package -DskipTests
 
 ##
 # Runtime stage: lightweight JRE image
