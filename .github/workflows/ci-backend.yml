@@ -2,9 +2,9 @@
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 env:
@@ -14,22 +14,28 @@ env:
   ECS_SSH_HOST: ${{ secrets.ECS_SSH_HOST }}
   ECS_SSH_USER: ${{ secrets.ECS_SSH_USER }}
   ECS_SSH_PORT: ${{ secrets.ECS_SSH_PORT }}
+  DOCKER_NETWORK: campus-network # 统一Docker网络名称
+  KAFKA_CONTAINER_NAME: campus-kafka # Kafka容器名称
+  BACKEND_CONTAINER_NAME: campus-backend # 后端容器名称
+  KAFKA_IMAGE: bitnami/kafka:3.7.0 # 与测试阶段一致的Kafka镜像
+  BACKEND_PORT: 8080 # 后端服务端口
+  KAFKA_PORT: 9092 # Kafka服务端口
 
 jobs:
   test:
     runs-on: ubuntu-22.04
     services:
       kafka:
-        image: bitnami/kafka:3.7.0
+        image: ${{ env.KAFKA_IMAGE }}
         ports:
-          - 9092:9092
+          - ${{ env.KAFKA_PORT }}:${{ env.KAFKA_PORT }}
         env:
           KAFKA_ENABLE_KRAFT: "yes"
           KAFKA_CFG_NODE_ID: "1"
           KAFKA_CFG_PROCESS_ROLES: "broker,controller"
           KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-          KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
-          KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+          KAFKA_CFG_LISTENERS: "PLAINTEXT://:${{ env.KAFKA_PORT }},CONTROLLER://:9093"
+          KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:${{ env.KAFKA_PORT }}"
           KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
           KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
           ALLOW_PLAINTEXT_LISTENER: "yes"
@@ -42,8 +48,9 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         env:
-          SPRING_KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+          SPRING_KAFKA_BOOTSTRAP_SERVERS: localhost:${{ env.KAFKA_PORT }}
         run: ./mvnw -B verify
+
   build-and-push:
     runs-on: ubuntu-22.04
     needs: test
@@ -77,13 +84,81 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.ECS_SSH_KEY }}
-      - name: Add ECS host key
+
+      - name: Add ECS host key to known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -p "$ECS_SSH_PORT" -H "$ECS_SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy to ECS
+      - name: Deploy Kafka and Backend to ECS
         run: |
           ssh -p "$ECS_SSH_PORT" "$ECS_SSH_USER@$ECS_SSH_HOST" \
-            "export ACR_SERVER=$ACR_SERVER ACR_USERNAME=$ACR_USERNAME ACR_PASSWORD=$ACR_PASSWORD IMAGE_TAG=${GITHUB_SHA}; \
-             /srv/campus-market/scripts/deploy-backend.sh"
+            "set -e; \
+             # 1. 创建Docker网络（不存在则创建）
+             docker network create $DOCKER_NETWORK || true; \
+             # 2. 停止并删除旧的Kafka容器（避免版本冲突）
+             docker stop $KAFKA_CONTAINER_NAME || true; \
+             docker rm $KAFKA_CONTAINER_NAME || true; \
+             # 3. 启动Kafka容器（同网络，支持容器名解析）
+             docker run -d \
+               --name $KAFKA_CONTAINER_NAME \
+               --network $DOCKER_NETWORK \
+               --restart always \
+               -p $KAFKA_PORT:$KAFKA_PORT \
+               -e KAFKA_ENABLE_KRAFT='yes' \
+               -e KAFKA_CFG_NODE_ID='1' \
+               -e KAFKA_CFG_PROCESS_ROLES='broker,controller' \
+               -e KAFKA_CFG_CONTROLLER_LISTENER_NAMES='CONTROLLER' \
+               -e KAFKA_CFG_LISTENERS='PLAINTEXT://:$KAFKA_PORT,CONTROLLER://:9093' \
+               -e KAFKA_CFG_ADVERTISED_LISTENERS='PLAINTEXT://$KAFKA_CONTAINER_NAME:$KAFKA_PORT' \
+               -e KAFKA_CFG_CONTROLLER_QUORUM_VOTERS='1@$KAFKA_CONTAINER_NAME:9093' \
+               -e KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP='CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT' \
+               -e ALLOW_PLAINTEXT_LISTENER='yes' \
+               $KAFKA_IMAGE; \
+             # 4. 等待Kafka启动（最多等待30秒）
+             echo 'Waiting for Kafka to start...'; \
+             for i in {1..30}; do \
+               if docker exec $KAFKA_CONTAINER_NAME nc -z localhost $KAFKA_PORT; then \
+                 echo 'Kafka started successfully'; \
+                 break; \
+               fi; \
+               sleep 1; \
+             done; \
+             # 5. 拉取最新后端镜像
+             docker login -u $ACR_USERNAME -p $ACR_PASSWORD $ACR_SERVER; \
+             docker pull $ACR_SERVER/campus-market/campus-market-backend:${{ github.sha }}; \
+             # 6. 停止并删除旧的后端容器
+             docker stop $BACKEND_CONTAINER_NAME || true; \
+             docker rm $BACKEND_CONTAINER_NAME || true; \
+             # 7. 启动后端容器（同网络，传递Kafka地址）
+             docker run -d \
+               --name $BACKEND_CONTAINER_NAME \
+               --network $DOCKER_NETWORK \
+               --restart always \
+               -p $BACKEND_PORT:$BACKEND_PORT \
+               -e SPRING_KAFKA_BOOTSTRAP_SERVERS='$KAFKA_CONTAINER_NAME:$KAFKA_PORT' \
+               $ACR_SERVER/campus-market/campus-market-backend:${{ github.sha }}; \
+             # 8. 验证后端容器启动状态
+             echo 'Checking backend container status...'; \
+             if docker ps | grep -q $BACKEND_CONTAINER_NAME; then \
+               echo 'Backend deployed successfully!'; \
+             else \
+               echo 'Backend deployment failed!'; \
+               docker logs $BACKEND_CONTAINER_NAME; \
+               exit 1; \
+             fi"
+
+      - name: Verify Backend Service Availability
+        run: |
+          echo "Waiting for backend service to be available...";
+          for i in {1..20}; do \
+            if curl -s --connect-timeout 5 "http://$ECS_SSH_HOST:$BACKEND_PORT/actuator/health" | grep -q "UP"; then \
+              echo "Backend service is healthy!"; \
+              exit 0; \
+            fi; \
+            sleep 3; \
+          done; \
+          echo "Backend service health check failed!"; \
+          ssh -p "$ECS_SSH_PORT" "$ECS_SSH_USER@$ECS_SSH_HOST" "docker logs $BACKEND_CONTAINER_NAME"; \
+          exit 1;
