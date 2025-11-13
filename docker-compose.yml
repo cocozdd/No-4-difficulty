@@ -27,12 +27,8 @@ services:
       SERVER_PORT: 8080
     ports:
       - "8080:8080"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 5s
-      start_period: 30s
-      retries: 3
+    networks:
+      - my_network
 
   frontend:
     build:
@@ -44,6 +40,8 @@ services:
       - backend
     ports:
       - "5173:80"
+    networks:
+      - my_network
 
   postgres:
     image: postgres:16
@@ -55,46 +53,64 @@ services:
       POSTGRES_PASSWORD: campus_pass
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./scripts/db-init/postgres-init.sql:/docker-entrypoint-initdb.d/postgres-init.sql:ro
+      - ./scripts/db-init:/docker-entrypoint-initdb.d:ro
     ports:
       - "15432:5432"
-
-  redis:
-    image: redis:6.2.14
-    container_name: campus-redis
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis-data:/data
-    ports:
-      - "6379:6379"
+    networks:
+      - my_network
 
   kafka:
     image: apache/kafka:3.7.0
     container_name: campus-kafka
     restart: unless-stopped
     environment:
-      KAFKA_CLUSTER_ID: Ihca8Kh7SgqLwjn8910n0Q
       KAFKA_NODE_ID: 1
+      KAFKA_CLUSTER_ID: "Ihca8Kh7SgqLwjn8910n0Q"
       KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_ZOOKEEPER_CONNECT: ""
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_LOG_DIRS: /var/lib/kafka/data
-    command: >
-      sh -c '
-        set -e
-        if [ ! -f /var/lib/kafka/data/meta.properties ]; then
-          /opt/kafka/bin/kafka-storage.sh format --ignore-formatted --cluster-id "$$KAFKA_CLUSTER_ID" --config /opt/kafka/config/kraft/server.properties
-        fi
-        exec /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties
-      '
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 1
     ports:
       - "9092:9092"
+      - "9093:9093"
     volumes:
       - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/kafka/bin/kafka-topics.sh",
+          "--bootstrap-server",
+          "kafka:9092",
+          "--list",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 10
+    networks:
+      - my_network
+
+  redis:
+    image: redis:6.2.14
+    container_name: campus-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - my_network
 
   minio:
     image: minio/minio:RELEASE.2023-04-07T05-28-58Z
@@ -109,28 +125,12 @@ services:
     ports:
       - "9000:9000"
       - "9090:9090"
+    networks:
+      - my_network
 
-  prometheus:
-    image: prom/prometheus:v2.53.0
-    container_name: campus-prometheus
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--web.enable-lifecycle"
-    ports:
-      - "9091:9090"
-
-  grafana:
-    image: grafana/grafana:10.4.3
-    container_name: campus-grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-    volumes:
-      - grafana-data:/var/lib/grafana
-    ports:
-      - "3000:3000"
+networks:
+  my_network:
+    driver: bridge
 
 volumes:
   postgres-data:
