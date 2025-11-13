@@ -2,6 +2,8 @@ package com.campusmarket.websocket;
 
 import com.campusmarket.security.jwt.JwtTokenProvider;
 import com.campusmarket.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
@@ -19,6 +21,8 @@ import java.util.Map;
 
 @Component
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtHandshakeInterceptor.class);
 
     private final JwtTokenProvider tokenProvider;
     private final UserService userService;
@@ -42,8 +46,20 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
         String username = tokenProvider.getUsername(token);
         String role = tokenProvider.getRole(token);
 
-        // Ensure the user exists
-        userService.findById(userId);
+        if (userId == null) {
+            log.warn("Rejecting WebSocket handshake: token does not contain a user id claim");
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            return false;
+        }
+
+        // Ensure the user still exists; reject stale tokens gracefully
+        try {
+            userService.findById(userId);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Rejecting WebSocket handshake: user {} from token does not exist", userId);
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            return false;
+        }
 
         attributes.put("userId", userId);
         attributes.put("username", username);

@@ -33,7 +33,7 @@
   sudo firewall-cmd --add-port=80/tcp --add-port=443/tcp \
     --add-port=8080/tcp --add-port=5173/tcp --add-port=3000/tcp \
     --add-port=3306/tcp --add-port=6379/tcp --add-port=9000/tcp \
-    --add-port=9090/tcp --add-port=9091/tcp --add-port=9092/tcp \
+    --add-port=9090/tcp --add-port=9091/tcp --add-port=9092/tcp --add-port=29092/tcp \
     --permanent && sudo firewall-cmd --reload
   ```
 
@@ -63,6 +63,9 @@
   EOF
   chmod 600 .env
   ```
+- **Kafka 本地调试提示**
+  - Compose 额外暴露了 `localhost:29092`（`PLAINTEXT_HOST` listener），方便宿主机或 IDE 直接连接测试。
+  - 后端默认使用 `spring.kafka.bootstrap-servers=localhost:29092`，容器内/服务器部署依旧通过 `SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092` 覆盖，推送到 ECS 时不需要改动代码。
 - **可选：接入外部 MinIO**
   - 如果已在宿主机或云端部署 MinIO，可结合仓库中的 `docker-compose.override.local-minio.yml` 覆盖文件：
     ```bash
@@ -172,7 +175,7 @@
 
 | 时间 | 现象 | 根因 | 解决方案 | 后续改进 |
 | --- | --- | --- | --- | --- |
-| 2025-11：本地 IDEA 启动后端报 `No resolvable bootstrap urls` | `spring.kafka.bootstrap-servers` 默认仍是容器网络地址 `kafka:9092` | 本地环境解析不到 `kafka` 主机名 | 将 `backend/src/main/resources/application.yml` 默认改为 `localhost:9092`，容器继续用 `SPRING_KAFKA_BOOTSTRAP_SERVERS` 覆盖 | 规范：配置文件默认指向 localhost，部署环境一律靠环境变量/override 注入 |
+| 2025-11：本地 IDEA 启动后端报 `No resolvable bootstrap urls` | `spring.kafka.bootstrap-servers` 默认仍是容器网络地址 `kafka:9092` | 本地环境解析不到 `kafka` 主机名 | 将 `backend/src/main/resources/application.yml` 默认改为 `localhost:29092`，容器继续用 `SPRING_KAFKA_BOOTSTRAP_SERVERS` 覆盖 | 规范：配置文件默认指向 localhost，部署环境一律靠环境变量/override 注入 |
 | 2025-11：打包后的前端 WebSocket 连到 `ws://localhost:5173/ws` 失败 | `resolveEndpoint()` 只对 dev 端口做特殊处理，静态站点托管在 5173 时没有 WS | 生产部署缺少固定 WS 地址 | 新增 `VITE_WS_ENDPOINT`，在 `.env.production` 写 `ws://<backend>/ws`，或把前后端托管到同一域名 | 上线 checklist 加入「确认 VITE_WS_ENDPOINT/反向代理配置」 |
 | 2025-11：图片上传成功但浏览器显示 `FAILED` | MinIO bucket 默认私有且生成 URL 为 `http://minio:9000/...` | 前端访问不到容器内网 Host，且没有公开读取策略 | `MinioProperties` 加 `publicEndpoint`、`MINIO_PUBLIC_ENDPOINT`；`MinioConfig` 自动下发只读策略 | 部署 checklist 增加「MINIO_PUBLIC_ENDPOINT 可访问」「bucket policy 允许匿名读取」 |
 | 2025-11：Element Plus 控制台警告 `type.text is about to be deprecated` | 仍大量使用 `el-button type="text"` | Element Plus 3 将移除此类型 | 将按钮改为 `link`（`frontend/src/views/MyGoodsView.vue`、`frontend/src/views/CartView.vue` 等） | 前端 lint 规则里加入 Element Plus 的 breaking change 检查 |
