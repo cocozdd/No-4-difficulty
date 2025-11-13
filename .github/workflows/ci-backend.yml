@@ -14,13 +14,10 @@ env:
   ECS_SSH_HOST: ${{ secrets.ECS_SSH_HOST }}
   ECS_SSH_USER: ${{ secrets.ECS_SSH_USER }}
   ECS_SSH_PORT: ${{ secrets.ECS_SSH_PORT }}
+  ECS_APP_DIR: /root/campus-market
   KAFKA_HOST: kafka
   KAFKA_PORT: 9092
   BACKEND_PORT: 8080
-  DOCKER_NETWORK: campus-network
-  KAFKA_CONTAINER_NAME: campus-kafka
-  BACKEND_CONTAINER_NAME: campus-backend
-  KAFKA_IMAGE: bitnami/kafka:3.7.0
 
 jobs:
   test:
@@ -92,52 +89,24 @@ jobs:
       - name: Deploy to ECS
         env:
           IMAGE_TAG: ${{ github.sha }}
+          TARGET_BRANCH: ${{ github.ref_name }}
         run: |
           ssh -p "$ECS_SSH_PORT" "$ECS_SSH_USER@$ECS_SSH_HOST" \
             "set -e; \
-             docker network create $DOCKER_NETWORK || true; \
-             docker stop $KAFKA_CONTAINER_NAME || true; \
-             docker rm $KAFKA_CONTAINER_NAME || true; \
-             docker run -d \
-               --name $KAFKA_CONTAINER_NAME \
-               --network $DOCKER_NETWORK \
-               --network-alias $KAFKA_HOST \
-               --restart always \
-               -p $KAFKA_PORT:$KAFKA_PORT \
-               -e KAFKA_ENABLE_KRAFT='yes' \
-               -e KAFKA_CFG_NODE_ID='1' \
-               -e KAFKA_CFG_PROCESS_ROLES='broker,controller' \
-               -e KAFKA_CFG_CONTROLLER_LISTENER_NAMES='CONTROLLER' \
-               -e KAFKA_CFG_LISTENERS='PLAINTEXT://:$KAFKA_PORT,CONTROLLER://:9093' \
-               -e KAFKA_CFG_ADVERTISED_LISTENERS=\"PLAINTEXT://$KAFKA_HOST:$KAFKA_PORT\" \
-               -e KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=\"1@$KAFKA_CONTAINER_NAME:9093\" \
-               -e KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP='CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT' \
-               -e ALLOW_PLAINTEXT_LISTENER='yes' \
-               $KAFKA_IMAGE; \
-             echo 'Waiting for Kafka to be ready...'; \
-             for i in {1..30}; do \
-               if docker exec $KAFKA_CONTAINER_NAME /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server $KAFKA_HOST:$KAFKA_PORT --list >/dev/null 2>&1; then \
-                 echo 'Kafka is ready'; \
-                 break; \
-               fi; \
-               if [ $i -eq 30 ]; then \
-                 echo 'Kafka failed to start'; \
-                 exit 1; \
-               fi; \
-               sleep 2; \
-             done; \
+             cd $ECS_APP_DIR; \
+             git fetch origin $TARGET_BRANCH; \
+             git checkout $TARGET_BRANCH; \
+             git reset --hard origin/$TARGET_BRANCH; \
              docker login -u $ACR_USERNAME -p $ACR_PASSWORD $ACR_SERVER; \
-             docker pull $ACR_SERVER/campus-market/campus-market-backend:$IMAGE_TAG; \
-             docker stop $BACKEND_CONTAINER_NAME || true; \
-             docker rm $BACKEND_CONTAINER_NAME || true; \
-             docker run -d \
-               --name $BACKEND_CONTAINER_NAME \
-               --network $DOCKER_NETWORK \
-               --restart always \
-               -p $BACKEND_PORT:$BACKEND_PORT \
-               -e SPRING_KAFKA_BOOTSTRAP_SERVERS=\"$KAFKA_HOST:$KAFKA_PORT\" \
-               $ACR_SERVER/campus-market/campus-market-backend:$IMAGE_TAG; \
-             docker ps --filter name=$BACKEND_CONTAINER_NAME --format 'table {{.Names}}\t{{.Status}}'; \
+             export BACKEND_IMAGE=\"$ACR_SERVER/campus-market/campus-market-backend:$IMAGE_TAG\"; \
+             compose_files='-f docker-compose.yml -f docker-compose.server.yml'; \
+             env_opt=''; \
+             if [ -f .env ]; then \
+               env_opt='--env-file .env'; \
+             fi; \
+             docker compose \$compose_files \$env_opt pull backend || true; \
+             docker compose \$compose_files \$env_opt up -d backend; \
+             docker compose \$compose_files \$env_opt ps backend; \
             "
 
       - name: Verify backend service

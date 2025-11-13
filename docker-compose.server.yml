@@ -1,0 +1,5 @@
+services:
+  backend:
+    build: null
+    image: ${BACKEND_IMAGE:-campus-market-backend:dev}
+    pull_policy: always
