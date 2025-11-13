@@ -14,7 +14,7 @@ env:
   ECS_SSH_HOST: ${{ secrets.ECS_SSH_HOST }}
   ECS_SSH_USER: ${{ secrets.ECS_SSH_USER }}
   ECS_SSH_PORT: ${{ secrets.ECS_SSH_PORT }}
-  ECS_APP_DIR: /root/campus-market
+  ECS_APP_DIR: /srv/campus-market
   KAFKA_HOST: kafka
   KAFKA_PORT: 9092
   BACKEND_PORT: 8080
